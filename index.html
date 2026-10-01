@@ -1,0 +1,903 @@
+<title>OneWindow Care Ops</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: app shell. Demo banner + top bar, left rail nav, scrolling work surface, slide-over client drawer, scenario narrator docked bottom-left. */
+:root{
+  --bg:#F2F5F4; --surface:#FFFFFF; --surface-2:#E9EFED; --line:#D4DDDA; --fg:#132220;
+  --muted:#556763; --teal:#0E5C57; --teal-ink:#0A4541; --teal-soft:#DAEBE8; --on-teal:#FFFFFF;
+  --amber:#8F5A0E; --amber-soft:#FBEED3; --red:#A3322C; --red-soft:#F7E0DC; --green:#256B46; --green-soft:#DDEFE3;
+  --banner:#FFE38A; --banner-fg:#3D3000; --scrim:rgba(10,24,22,.38);
+  --shadow:0 1px 2px rgba(16,40,36,.06),0 6px 18px rgba(16,40,36,.07);
+  --f-ui:"Public Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D1614; --surface:#14201E; --surface-2:#1A2826; --line:#293936; --fg:#E2ECEA; --muted:#93A6A2;
+  --teal:#56B6AD; --teal-ink:#86D0C8; --teal-soft:#16332F; --on-teal:#062321;
+  --amber:#E3A94F; --amber-soft:#382A10; --red:#EC857B; --red-soft:#3A1C19; --green:#71C593; --green-soft:#15301F;
+  --banner:#4B3D0C; --banner-fg:#FFE58F; --scrim:rgba(0,0,0,.55); --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.3);
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D1614; --surface:#14201E; --surface-2:#1A2826; --line:#293936; --fg:#E2ECEA; --muted:#93A6A2;
+  --teal:#56B6AD; --teal-ink:#86D0C8; --teal-soft:#16332F; --on-teal:#062321;
+  --amber:#E3A94F; --amber-soft:#382A10; --red:#EC857B; --red-soft:#3A1C19; --green:#71C593; --green-soft:#15301F;
+  --banner:#4B3D0C; --banner-fg:#FFE58F; --scrim:rgba(0,0,0,.55); --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.3);
+  color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:14.5px;line-height:1.45}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{margin:0;text-wrap:balance}
+h1{font-size:22px;font-weight:800;letter-spacing:-.01em}
+h2{font-size:15px;font-weight:700}
+h3{font-size:13.5px;font-weight:700}
+p{margin:0}
+.mono{font-family:var(--f-mono);font-size:12.5px}
+.muted{color:var(--muted)}
+.num{font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+.app{display:flex;flex-direction:column;height:100%}
+.banner{background:var(--banner);color:var(--banner-fg);font-size:12.5px;font-weight:600;padding:6px 16px;text-align:center;letter-spacing:.01em}
+.top{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px;white-space:nowrap}
+.brand .mark{width:28px;height:28px;border-radius:7px;background:var(--teal);color:var(--on-teal);display:grid;place-items:center}
+.brand small{display:block;font-weight:500;font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.search{position:relative;flex:1 1 220px;min-width:0;max-width:420px}
+.search input{width:100%;padding:8px 10px 8px 34px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
+.search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.sres{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);z-index:40;max-height:320px;overflow:auto}
+.sres button{display:flex;justify-content:space-between;gap:8px;width:100%;text-align:left;padding:8px 12px;border:0;background:none;cursor:pointer}
+.sres button:hover{background:var(--surface-2)}
+.top-right{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap}
+.date{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--surface);padding:6px 10px;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--muted)}
+.seg button.on{background:var(--teal);color:var(--on-teal)}
+.iconbtn{position:relative;border:1px solid var(--line);background:var(--surface);border-radius:8px;width:34px;height:34px;display:grid;place-items:center;cursor:pointer;color:var(--fg)}
+.iconbtn .dot{position:absolute;top:-5px;right:-5px;background:var(--red);color:#fff;font-size:10.5px;font-weight:700;border-radius:10px;padding:1px 5px}
+
+.shell{display:flex;flex:1;min-height:0}
+.rail{width:224px;flex:none;background:var(--surface);border-right:1px solid var(--line);padding-block:12px;padding-inline:10px;overflow:auto;display:flex;flex-direction:column;gap:2px}
+.rail .grp{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:12px 10px 4px;font-weight:700}
+.rail button{display:flex;align-items:center;gap:10px;border:0;background:none;padding:8px 10px;border-radius:8px;cursor:pointer;text-align:left;color:var(--fg);font-weight:500;white-space:nowrap}
+.rail button:hover{background:var(--surface-2)}
+.rail button.on{background:var(--teal-soft);color:var(--teal-ink);font-weight:700}
+.rail button .cnt{margin-left:auto;font-size:11.5px;font-weight:700;background:var(--surface-2);border-radius:10px;padding:1px 7px;color:var(--muted)}
+.rail button .cnt.crit{background:var(--red-soft);color:var(--red)}
+main{flex:1;min-width:0;overflow:auto;padding-block:20px 120px;padding-inline:24px}
+
+.page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.sub{color:var(--muted);font-size:13px;margin-top:3px}
+.head-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);padding:7px 12px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--teal)}
+.btn-p{background:var(--teal);border-color:var(--teal);color:var(--on-teal)}
+.btn-p:hover{background:var(--teal-ink);border-color:var(--teal-ink)}
+.btn-s{padding:4px 9px;font-size:12px}
+.btn-warn{background:var(--amber-soft);border-color:transparent;color:var(--amber)}
+.btn-danger{background:var(--red-soft);border-color:transparent;color:var(--red)}
+.btn[disabled]{opacity:.55;cursor:not-allowed}
+.spin{width:12px;height:12px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .7s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.panel-h{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+.grid-2{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.kpi:hover{border-color:var(--teal)}
+.kpi .v{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.kpi .l{font-size:12px;color:var(--muted);font-weight:600}
+.kpi.crit .v{color:var(--red)} .kpi.warn .v{color:var(--amber)} .kpi.ok .v{color:var(--green)}
+
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;background:var(--surface-2);color:var(--muted)}
+.c-crit{background:var(--red-soft);color:var(--red)} .c-warn{background:var(--amber-soft);color:var(--amber)}
+.c-ok{background:var(--green-soft);color:var(--green)} .c-info{background:var(--teal-soft);color:var(--teal-ink)}
+.sev{width:4px;align-self:stretch;border-radius:3px;background:var(--line);flex:none}
+.sev.crit{background:var(--red)} .sev.warn{background:var(--amber)} .sev.ok{background:var(--green)}
+
+.qlist{display:flex;flex-direction:column;gap:8px}
+.qi{display:flex;gap:12px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:8px}
+.qi .body{flex:1;min-width:0}
+.qi .t{font-weight:600}
+.qi .m{font-size:12.5px;color:var(--muted)}
+.qi .kind{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;color:var(--muted)}
+
+.srcs{display:flex;flex-direction:column}
+.src{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.src:last-child{border-bottom:0}
+.src .role{font-size:11.5px;color:var(--muted)}
+.feed{display:flex;flex-direction:column;gap:8px;max-height:300px;overflow:auto}
+.feed div{display:grid;grid-template-columns:60px 1fr;gap:8px;font-size:12.5px}
+.feed .tm{color:var(--muted);font-variant-numeric:tabular-nums}
+
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:9px 12px;border-bottom:1px solid var(--line);background:var(--surface-2);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td.nw{white-space:nowrap}
+.bar{height:7px;border-radius:5px;background:var(--surface-2);overflow:hidden;min-width:80px}
+.bar i{display:block;height:100%;background:var(--teal);border-radius:5px}
+.bar.warn i{background:var(--amber)} .bar.crit i{background:var(--red)}
+.clickname{background:none;border:0;padding:0;font-weight:700;cursor:pointer;color:var(--teal-ink);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+
+.board{display:grid;grid-auto-flow:column;grid-auto-columns:230px;gap:10px;overflow-x:auto;padding-bottom:10px}
+.col{background:var(--surface-2);border-radius:var(--r);padding:8px;display:flex;flex-direction:column;gap:8px;min-height:180px}
+.col-h{display:flex;justify-content:space-between;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:4px 4px 2px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px;box-shadow:var(--shadow)}
+.card .top-l{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.card .ini{font-weight:800;font-size:15px}
+.card .svc{font-size:12.5px;font-weight:600}
+.card .pl{font-size:12px;color:var(--muted)}
+.card .chips{display:flex;flex-wrap:wrap;gap:4px}
+.card .msg{font-size:12px;background:var(--amber-soft);color:var(--amber);padding:6px 8px;border-radius:6px;font-weight:600}
+.card .acts{display:flex;gap:6px;justify-content:space-between}
+.mini{font-size:12px;padding:6px 8px;background:var(--surface);border:1px solid var(--line);border-radius:6px;display:flex;justify-content:space-between;cursor:pointer;text-align:left}
+
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(540px,100%);background:var(--surface);border-left:1px solid var(--line);box-shadow:-10px 0 30px rgba(0,0,0,.15);z-index:60;overflow:auto;padding-block:calc(16px + env(safe-area-inset-top,0px)) calc(24px + env(safe-area-inset-bottom,0px));padding-inline:20px}
+#scrim{position:fixed;inset:0;background:var(--scrim);z-index:55}
+.dsec{border-top:1px solid var(--line);padding-top:14px;margin-top:14px;display:flex;flex-direction:column;gap:8px}
+.dsec h3{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:6px 12px;font-size:13px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-weight:600;min-width:0}
+.route{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.route div{background:var(--surface-2);border-radius:8px;padding:8px 10px}
+.route small{display:block;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.route b{font-size:13px}
+.flag{background:var(--red-soft);color:var(--red);border-radius:8px;padding:10px 12px;font-size:13px;font-weight:600}
+.check{display:flex;flex-direction:column;gap:5px}
+.check div{display:flex;gap:8px;align-items:center;font-size:13px}
+.ck{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;flex:none;background:var(--surface-2);color:var(--muted)}
+.ck.y{background:var(--green-soft);color:var(--green)} .ck.n{background:var(--red-soft);color:var(--red)}
+
+.els{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.el{border:1px solid var(--line);border-radius:7px;padding:6px 8px;font-size:12px}
+.el small{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
+.el.bad{border-color:var(--red);background:var(--red-soft)}
+.el.bad small,.el.bad b{color:var(--red)}
+.exc{display:flex;gap:12px;padding:14px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.exc .body{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.between{justify-content:space-between}
+
+.mx td.st{text-align:center;padding:6px}
+.dst{border:0;background:none;cursor:default;width:30px;height:28px;border-radius:6px;font-weight:800;font-size:13px}
+.dst.ok{color:var(--green)} .dst.na{color:var(--muted)}
+.dst.missing{background:var(--red-soft);color:var(--red);cursor:pointer}
+.dst.expired{background:var(--red-soft);color:var(--red);cursor:pointer}
+.dst.expiring{background:var(--amber-soft);color:var(--amber);cursor:pointer}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+
+.cal{display:grid;grid-template-columns:150px repeat(7,minmax(90px,1fr));min-width:820px}
+.cal > div{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:6px;font-size:12px;min-height:44px}
+.cal .hd{background:var(--surface-2);font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.cal .today{background:var(--teal-soft)}
+.vis{display:block;background:var(--teal-soft);color:var(--teal-ink);border-radius:5px;padding:2px 5px;margin-bottom:3px;font-weight:600;font-size:11.5px}
+.vis.new{background:var(--amber-soft);color:var(--amber)}
+
+.hbar{display:grid;grid-template-columns:170px 1fr 34px;gap:10px;align-items:center;font-size:13px}
+.hbar .t{height:14px;background:var(--surface-2);border-radius:4px;overflow:hidden}
+.hbar .t i{display:block;height:100%}
+
+.report{white-space:pre-wrap;font-family:var(--f-mono);font-size:12.5px;line-height:1.6;background:var(--surface-2);border-radius:8px;padding:16px;overflow-x:auto;max-width:78ch}
+.field{display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:600}
+.field input,.field select,.field textarea{padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--surface);font-weight:400}
+textarea{resize:vertical}
+.tabs{display:inline-flex;gap:4px;background:var(--surface-2);padding:3px;border-radius:9px}
+.tabs button{border:0;background:none;padding:6px 12px;border-radius:7px;font-weight:600;font-size:13px;cursor:pointer;color:var(--muted)}
+.tabs button.on{background:var(--surface);color:var(--fg);box-shadow:var(--shadow)}
+
+#modal{position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:var(--scrim);padding:16px}
+.mbox{background:var(--surface);border-radius:12px;width:min(560px,100%);max-height:88vh;overflow:auto;padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px}
+#toasts{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;z-index:90;max-width:min(380px,calc(100vw - 32px))}
+.toast{background:var(--fg);color:var(--bg);padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:var(--shadow);animation:tin .2s ease-out}
+.toast.warn{background:var(--amber);color:#1b1200} .toast.crit{background:var(--red);color:#fff}
+@keyframes tin{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+
+#scen{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(390px,calc(100vw - 32px));z-index:70;background:var(--surface);border:2px solid var(--teal);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.25);padding:16px;display:flex;flex-direction:column;gap:10px}
+#scen .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.09em;font-weight:700;color:var(--teal-ink)}
+#scen .prog{height:4px;background:var(--surface-2);border-radius:3px;overflow:hidden}
+#scen .prog i{display:block;height:100%;background:var(--teal)}
+#scen p{font-size:13.5px}
+.hl{outline:3px solid var(--amber)!important;outline-offset:3px;animation:pulse 1.4s ease-in-out 3}
+@keyframes pulse{50%{outline-color:transparent}}
+.guard{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.empty{padding:24px;text-align:center;color:var(--muted);font-size:13px}
+
+@media (max-width: 1100px){.grid-2{grid-template-columns:minmax(0,1fr)}}
+@media (max-width: 860px){
+  .shell{flex-direction:column}
+  .rail{width:auto;flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding-block:6px}
+  .rail .grp{display:none}
+  main{padding-inline:16px}
+  .date{display:none}
+}
+@media (max-width: 520px){.route{grid-template-columns:1fr}.kv{grid-template-columns:1fr}.hbar{grid-template-columns:110px 1fr 28px}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="app">
+  <div class="banner" role="note">DEMO ENVIRONMENT. All names, IDs and records are fictional. Concept prototype with simulated connections only.</div>
+  <header class="top">
+    <div class="brand"><span class="mark" id="markIc"></span><span>OneWindow<small>Care Ops · concept</small></span></div>
+    <div class="search"><span id="searchIc"></span><input id="gsearch" type="search" placeholder="Search clients, caregivers, auth numbers" autocomplete="off" aria-label="Search"><div class="sres" id="sres" hidden></div></div>
+    <div class="top-right">
+      <span class="date" id="today"></span>
+      <div class="seg" role="group" aria-label="Role">
+        <button data-a="role" data-r="coord" id="r-coord">Coordinator</button>
+        <button data-a="role" data-r="sup" id="r-sup">Supervisor</button>
+      </div>
+      <button class="iconbtn" data-a="go" data-v="approvals" id="bell" aria-label="Approvals and alerts"></button>
+      <button class="iconbtn" data-a="theme" id="themeBtn" aria-label="Toggle dark mode"></button>
+      <button class="btn btn-p" data-a="scenMenu" id="scenBtn"></button>
+    </div>
+  </header>
+  <div class="shell">
+    <nav class="rail" id="rail" aria-label="Modules"></nav>
+    <main id="main"></main>
+  </div>
+</div>
+<div id="scrim" hidden data-a="closeDrawer"></div>
+<aside id="drawer" class="drawer" hidden aria-label="Client record"></aside>
+<div id="modal" hidden></div>
+<div id="scen" hidden></div>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+/* ============================ utilities ============================ */
+const $=s=>document.querySelector(s);
+const TODAY=new Date();TODAY.setHours(0,0,0,0);
+const dd=n=>{const d=new Date(TODAY);d.setDate(d.getDate()+n);return d};
+const fd=n=>dd(n).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+const fdw=n=>dd(n).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+const clock=()=>new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+const sim=(a=600,b=1200)=>new Promise(r=>setTimeout(r,a+Math.random()*(b-a)));
+const P={
+ command:'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+ pipeline:'M4 5h4v14H4zM10 5h4v9h-4zM16 5h4v5h-4z',
+ elig:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM8.5 12l2.5 2.5 4.5-5',
+ auths:'M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6',
+ evv:'M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18zM12 7v5l3 2',
+ docs:'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+ bh:'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c.6-3.4 3.3-5.5 6.5-5.5s5.9 2.1 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14.8c2 .7 3.2 2.5 3.5 5.2',
+ schedule:'M4 6h16v14H4zM4 10h16M8 3v5M16 3v5',
+ billing:'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6',
+ followups:'M4 5h16v11H9l-5 4z',
+ eod:'M5 3h14v18H5zM9 8h6M9 12h6M9 16h3',
+ audit:'M6 11h12v10H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3',
+ approvals:'M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18zM8 12.5l2.7 2.7L16 9.8',
+ bell:'M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0',
+ search:'M11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14zM20 20l-4-4',
+ play:'M8 5l11 7-11 7z',
+ moon:'M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z',
+ x:'M6 6l12 12M18 6L6 18',
+ sync:'M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3M18 3v4h-4M6 21v-4h4',
+ window:'M4 5h16v14H4zM4 9h16M10 9v10'
+};
+const ic=(n,s=18)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${P[n]}"/></svg>`;
+
+/* ============================ reference data ============================ */
+const STAGES=['Received','Logged','Eligibility Verified','Authorization Confirmed','Documents Complete','Staffing Confirmed','First Visit Scheduled','EVV Set Up','First Visit Monitored','Active'];
+const HC_DOCS=['Authorization letter','Consent forms','Plan of Care','Physician orders','RN supervisory note','Visit notes','Incident reports','OASIS'];
+const BH_DOCS=['CCA','Person-Centered Plan','Service order','Authorization letter','Consent forms','Progress notes'];
+const DOC_OWNER={'Authorization letter':'Payer / MCO','Consent forms':'Client or guardian','Plan of Care':'RN case manager','Physician orders':'Ordering physician office','RN supervisory note':'RN supervisor','Visit notes':'Assigned caregiver','Incident reports':'Assigned caregiver','OASIS':'RN (Medicare home health only)','CCA':'Licensed clinician','Person-Centered Plan':'Care manager and clinician','Service order':'Licensed professional','Progress notes':'Assigned staff'};
+const SUPERVISOR='R. Whitfield, Supervisor';
+const COORD='Ops Coordinator';
+
+function route(plan){
+  if(plan==='NC Medicaid Direct') return {type:'NC Medicaid Direct',elig:'NCTracks',auth:'NCTracks prior approval',evv:'Sandata'};
+  if(plan==='Healthy Blue') return {type:'Standard Plan',elig:'NCTracks, then plan portal',auth:'Healthy Blue portal',evv:'CareBridge'};
+  if(plan==='Trillium Tailored Plan') return {type:'Tailored Plan (LME/MCO)',elig:'NCTracks, then Trillium',auth:'Trillium / HHAeXchange',evv:'HHAeXchange'};
+  return {type:'Standard Plan',elig:'NCTracks, then plan portal',auth:'HHAeXchange / plan portal',evv:'HHAeXchange'};
+}
+const isStd=p=>route(p).type==='Standard Plan';
+const is1915=s=>s.startsWith('1915(i)');
+const evvApplies=s=>s!=='Peer Support';
+const flag1915=c=>isStd(c.plan)&&is1915(c.svc);
+
+/* ============================ mock layer (swap for real APIs later) ============================ */
+const ELIG_RESULTS={
+  C04:{result:'Inactive',plan:'None on file',note:'Coverage end date on file. Hold new visits and confirm with client and county DSS.'},
+  C08:{result:'Active, plan changed',plan:'WellCare of NC',note:'Previously Carolina Complete Health. Update payer and authorization source.'},
+  C13:{result:'Pending update from NC FAST',plan:'NC Medicaid Direct',note:'NCTracks can lag NC FAST by up to a week. Confirm with the NCTracks Call Center.'}
+};
+const MockAPI={
+  async nctracks(c){await sim();return ELIG_RESULTS[c.id]||{result:'Active',plan:c.plan};},
+  async sync(){await sim(800,1400);},
+  async send(){await sim(500,900);},
+  async payer(){await sim(800,1300);}
+};
+
+/* ============================ state ============================ */
+const S={role:'coord',view:'command',busy:{},cardMsg:{},drawer:null,revealAsk:null,revealed:{},docTab:'HC',authExp:false,evvAgg:'All',taskFilter:'open',matchFor:'C14',matchRes:null,eod:null,theme:null,scenario:null,
+  settings:{lead:10,esc:24,cutoff:5},stats:{elig:0,evvResolved:0,docsFollowed:0,authChecked:0,msgs:0},
+  clients:[],cgs:[],peers:[],auths:[],evv:[],docs:{},docReq:{},tasks:[],approvals:[],activity:[],audit:[],sched:[],visits:[],sources:[]};
+
+function mk(id,ini,town,plan,svc,stage,x={}){return{id,ini,town,plan,svc,prog:(svc==='Personal Care'||svc==='Home Health')?'HC':'BH',stage,since:x.since??14,received:x.received??60,blockers:[],cg:x.cg||null,mid:x.mid||String(1000+Math.floor(Math.random()*8999)),elig:x.elig||{date:-3,result:'Active'},notes:[],tcm:x.tcm||null,cca:x.cca||null,pcp:x.pcp||null,so:x.so||null,next:x.next??null,noteRate:x.noteRate??null,src:x.src||'Referral',alert:null}}
+const cl=id=>S.clients.find(c=>c.id===id);
+const cgName=id=>{if(!id)return'Unassigned';const g=S.cgs.find(g=>g.id===id)||S.peers.find(g=>g.id===id);return g?g.name:id};
+function addB(c,key,label){if(!c.blockers.some(b=>b.key===key))c.blockers.push({key,label})}
+function rmB(c,key){c.blockers=c.blockers.filter(b=>b.key!==key)}
+
+function seed(){
+  S.cgs=[
+    {id:'CG01',name:'Denise Holloway',skills:['Personal care','Dementia care'],lang:['English'],avail:'Mon–Fri AM',cpr:40,tb:120,bg:300,town:'Goldsboro'},
+    {id:'CG02',name:'Marcus Bell',skills:['Personal care','Transfers'],lang:['English'],avail:'Mon–Sat',cpr:12,tb:200,bg:250,town:'Mount Olive'},
+    {id:'CG03',name:'Rosa Delgado',skills:['Personal care','Community living support'],lang:['English','Spanish'],avail:'Tue–Sat',cpr:180,tb:25,bg:330,town:'Goldsboro'},
+    {id:'CG04',name:'Tanya Greene',skills:['Home health aide','Vitals'],lang:['English'],avail:'Mon–Fri',cpr:210,tb:160,bg:90,town:'Fremont'},
+    {id:'CG05',name:'Kevin Odom',skills:['Personal care','Transfers'],lang:['English'],avail:'Weekends',cpr:-3,tb:140,bg:200,town:'Pikeville'},
+    {id:'CG06',name:'Lashonda Pierce',skills:['Personal care','Dementia care'],lang:['English'],avail:'Mon–Fri PM',cpr:300,tb:280,bg:310,town:'Goldsboro'},
+    {id:'CG07',name:'Hector Ruiz',skills:['Personal care'],lang:['English','Spanish'],avail:'Mon–Fri',cpr:90,tb:60,bg:150,town:'Mount Olive'},
+    {id:'CG08',name:'Brenda Faircloth',skills:['Home health aide','Wound care support'],lang:['English'],avail:'Mon–Thu',cpr:150,tb:8,bg:260,town:'Goldsboro'},
+    {id:'CG09',name:'Jasmine Artis',skills:['Personal care','Meal prep'],lang:['English'],avail:'Mon–Sat',cpr:220,tb:190,bg:340,town:'Fremont'},
+    {id:'CG10',name:'Carl Thompson',skills:['Personal care','Transfers'],lang:['English'],avail:'Mon–Fri',cpr:60,tb:100,bg:20,town:'Pikeville'}];
+  S.peers=[{id:'P1',name:'Andre Whitley, CPSS'},{id:'P2',name:'Monica Hales, CPSS'},{id:'P3',name:'Travis Lane, CPSS'}];
+  const tcm='Janelle Price, Tailored Care Manager';
+  const cca=(d)=>({date:d,clin:'D. Okafor, LCMHC'});
+  S.clients=[
+    mk('C01','A.B.','Goldsboro','WellCare of NC','Personal Care',9,{cg:'CG01',mid:'4821'}),
+    mk('C02','J.T.','Mount Olive','NC Medicaid Direct','Home Health',9,{cg:'CG04',mid:'7730'}),
+    mk('C03','L.M.','Fremont','Trillium Tailored Plan','Peer Support',9,{cg:'P1',tcm,cca:cca(-120),pcp:{status:'Signed',review:14},so:'On file',next:2,noteRate:96}),
+    mk('C04','D.W.','Pikeville','Healthy Blue','Personal Care',9,{cg:'CG10'}),
+    mk('C05','R.S.','Goldsboro','AmeriHealth Caritas NC','Personal Care',9,{cg:'CG06'}),
+    mk('C06','K.P.','Goldsboro','Trillium Tailored Plan','1915(i) Community Living and Support',9,{cg:'CG03',tcm,cca:cca(-150),pcp:{status:'Signed',review:40},so:'On file',next:1,noteRate:88}),
+    mk('C07','T.H.','Mount Olive','UHC Community Plan','Personal Care',9,{cg:'CG07'}),
+    mk('C08','B.N.','Fremont','Carolina Complete Health','Personal Care',9,{cg:'CG09'}),
+    mk('C09','S.G.','Goldsboro','NC Medicaid Direct','Peer Support',9,{cg:'P2',tcm:'Care coordination via Trillium (Medicaid Direct BH)',cca:cca(-200),pcp:{status:'Signed',review:22},so:'On file',next:0,noteRate:71}),
+    mk('C10','E.F.','Pikeville','Trillium Tailored Plan','1915(i) Individual and Transitional Support',9,{cg:'P3',tcm,cca:cca(-90),pcp:{status:'Signed',review:55},so:'Missing',next:3,noteRate:90}),
+    mk('C11','P.L.','Goldsboro','Carolina Complete Health','Peer Support',3,{since:2,received:5,elig:{date:-4,result:'Active'},tcm:'AMH care manager: Tori Blanding',cca:cca(-6),pcp:{status:'Unsigned draft',review:null},so:'On file',noteRate:null}),
+    mk('C12','G.A.','Mount Olive','AmeriHealth Caritas NC','1915(i) Respite',1,{since:0,received:0,elig:{date:0,result:'Active'},tcm:'Not assigned',src:'Community referral (family)'}),
+    mk('C13','N.C.','Fremont','NC Medicaid Direct','Home Health',1,{since:1,received:2,elig:{date:-1,result:'Pending update from NC FAST'},src:'Hospital discharge referral'}),
+    mk('C14','V.O.','Goldsboro','Trillium Tailored Plan','Personal Care',4,{since:3,received:8,src:'HHAeXchange case broadcast'})
+  ];
+  addB(cl('C11'),'doc:Person-Centered Plan','PCP unsigned');
+  addB(cl('C12'),'1915i','1915(i) not covered on Standard Plan');
+  addB(cl('C13'),'elig','Eligibility pending (NC FAST)');
+  addB(cl('C13'),'doc:Physician orders','Physician orders missing');
+  addB(cl('C13'),'doc:Consent forms','Consent missing');
+  addB(cl('C14'),'match','Caregiver match awaiting supervisor');
+
+  const A=(id,cid,code,svc,units,used,start,end,ren='Not started')=>({id,cid,num:'DEMO-AUTH-'+(10200+parseInt(id.slice(1))*37),code,svc,units,used,start,end,ren});
+  S.auths=[
+    A('A01','C01','T1019','Personal care',336,290,-84,6),
+    A('A02','C02','G0156','Home health aide',60,22,-40,50),
+    A('A03','C03','H0038','Peer support',208,170,-78,12,'Documents gathered'),
+    A('A04','C04','T1019','Personal care',280,120,-30,60),
+    A('A05','C05','T1019','Personal care',312,250,-69,21),
+    A('A06','C06','DEMO-CLS','1915(i) CLS (demo code)',400,330,-63,27),
+    A('A07','C07','T1019','Personal care',240,236,-50,40),
+    A('A08','C08','T1019','Personal care',336,100,-20,70),
+    A('A09','C09','H0038','Peer support',104,90,-81,9,'Sent to supervisor'),
+    A('A10','C10','DEMO-ITS','1915(i) ITS (demo code)',300,80,-25,65),
+    A('A11','C11','H0038','Peer support',104,0,-1,89),
+    A('A14','C14','T1019','Personal care',280,0,0,90)];
+
+  // schedule for this week
+  const dow=(TODAY.getDay()+6)%7; S.weekStart=-dow;
+  const pat={C01:[0,2,4],C02:[0,2,4],C03:[1,3],C04:[1,3,5],C05:[0,2,4],C06:[0,2,4],C07:[0,3],C08:[1,3,5],C09:[1,3],C10:[1,3]};
+  const times={HC:['9:00','12:00',3],HH:['10:00','11:00',1],BH:['14:00','15:00',1],CLS:['13:00','16:00',3],ITS:['15:00','17:00',2]};
+  S.sched=[];
+  S.clients.filter(c=>c.stage===9).forEach(c=>{
+    const t=c.svc==='Home Health'?times.HH:c.svc==='Peer Support'?times.BH:c.id==='C06'?times.CLS:c.id==='C10'?times.ITS:times.HC;
+    (pat[c.id]||[]).forEach(d=>S.sched.push({cid:c.id,cg:c.cg,day:S.weekStart+d,start:t[0],end:t[1],hrs:t[2]}));
+  });
+  // billing visits: last week + this week so far
+  let v=1;S.visits=[];
+  S.sched.forEach(s=>{[s.day-7,s.day].forEach(d=>{if(d<=0)S.visits.push({id:'V'+(v++),cid:s.cid,cg:s.cg,day:d,hrs:s.hrs,status:'ready',ex:null})})});
+  S.visits.filter(x=>x.cid==='C07').slice(-1).forEach(x=>x.status='auth');
+  S.visits.filter(x=>x.cid==='C09').slice(-2).forEach(x=>x.status='note');
+
+  const E=(id,cid,cg,date,type,el,sched,actual,status='open')=>({id,cid,cg,date,type,el,sched,actual,status,reason:null,attempts:0});
+  S.evv=[
+    E('E1','C01','CG01',-1,'Missing clock-out','time','9:00–12:00','9:02 – no clock-out'),
+    E('E2','C02','CG04',-1,'Missing clock-in','time','10:00–11:00','no clock-in – 11:04','pending'),
+    E('E3','C04','CG10',-2,'Location mismatch','location','9:00–12:00','GPS 4.8 mi from service address'),
+    E('E4','C05','CG06',-1,'Caregiver not matched','caregiver','9:00–12:00','Worker ID not registered with aggregator'),
+    E('E5','C07','CG07',-2,'Duration variance vs schedule','time','9:00–12:00','9:10–10:22 (1h 12m)'),
+    E('E6','C08','CG09',-1,'Manual entry without reason code','time','9:00–12:00','Manual: 9:00–12:00, no reason code'),
+    E('E7','C10','P3',-26,'Visit outside authorization dates','date','Auth starts '+fd(-25),'Visit dated '+fd(-26)),
+    E('E8','C06','CG03',-1,'Unscheduled visit','service','No schedule on file','16:30–18:00, service not confirmed')];
+  S.evv.forEach(e=>S.visits.push({id:'V'+(v++),cid:e.cid,cg:e.cg,day:e.date,hrs:e.id==='E5'?1:3,status:e.status==='verified'?'ready':'evv',ex:e.id}));
+
+  // documents
+  S.clients.forEach(seedDocs);
+  const setD=(cid,d,s)=>S.docs[cid+'|'+d]=s;
+  setD('C13','Physician orders','missing');setD('C13','Consent forms','missing');
+  setD('C11','Person-Centered Plan','missing');
+  setD('C12','CCA','missing');setD('C12','Person-Centered Plan','missing');setD('C12','Consent forms','missing');setD('C12','Service order','missing');setD('C12','Authorization letter','missing');
+  setD('C04','RN supervisory note','expired');setD('C09','Progress notes','missing');setD('C10','Service order','missing');
+  setD('C03','Person-Centered Plan','expiring');setD('C07','Consent forms','expiring');setD('C05','Incident reports','ok');
+  const hrsAgo=h=>Date.now()-h*3600e3;
+  S.docReq={'C13|Physician orders':{hist:[{at:hrsAgo(30),to:'Ordering physician office',ch:'Fax + phone'}]},
+            'C11|Person-Centered Plan':{hist:[{at:hrsAgo(26),to:'AMH care manager',ch:'E-signature request'}]},
+            'C12|Consent forms':{hist:[{at:hrsAgo(5),to:'Client or guardian',ch:'E-signature request'}]}};
+
+  const T=(id,cid,text,owner,ch,due,status='open')=>({id,cid,text,owner,ch,due,status,att:1});
+  S.tasks=[
+    T('T1','C13','Call physician office for signed orders (2nd attempt)',COORD,'Phone','Today 2:00 PM'),
+    T('T2','C01','Gather docs for T1019 renewal (ends '+fd(6)+')',COORD,'Portal','Tomorrow 10:00 AM'),
+    T('T3','C01','Ask caregiver to correct missing clock-out',COORD,'Portal message','Today 4:00 PM'),
+    T('T4','C11','Chase PCP signatures with AMH care manager',COORD,'Email (secure)','Today 3:00 PM'),
+    T('T5','C12','Escalate 1915(i) plan mismatch to supervisor',COORD,'Internal','Today 5:00 PM'),
+    T('T6','C05','Register worker ID with aggregator',COORD,'Portal','Tomorrow 12:00 PM'),
+    T('T7','C08','Weekly EVV review sent to supervisor',COORD,'Email (secure)','Yesterday','done')];
+
+  S.approvals=[
+    {id:'AP1',kind:'renewal',ref:'A09',cid:'C09',label:'Authorization renewal: H0038 peer support',detail:'Ends '+fd(9)+'. CCA, PCP and last 30 days of notes attached.',at:'8:40 AM',status:'pending'},
+    {id:'AP2',kind:'match',cid:'C14',cg:'CG06',label:'Caregiver match for V.O.',detail:'Lashonda Pierce, Goldsboro, 2.1 mi, dementia care, credentials current.',at:'9:15 AM',status:'pending'},
+    {id:'AP3',kind:'evv',ref:'E2',cid:'C02',label:'EVV correction: missing clock-in',detail:'Caregiver confirmed arrival 10:00. Reason code: device/app failure.',at:'10:05 AM',status:'pending'}];
+  cl('C02'); S.evv.find(e=>e.id==='E2').reason='Device/app failure';
+
+  S.sources=[
+    {n:'Agency management (CareSmartz360 style)',r:'Clients, schedules, visits',m:4},
+    {n:'HHAeXchange',r:'Standard & Tailored Plan referrals, auths, EVV',m:6},
+    {n:'Sandata aggregator',r:'NC Medicaid Direct EVV (view only)',m:11},
+    {n:'CareBridge aggregator',r:'Healthy Blue EVV',m:11},
+    {n:'NCTracks',r:'Eligibility, prior approval',m:2},
+    {n:'Trillium provider portal',r:'Tailored Plan auths, 1915(i)',m:18},
+    {n:'Behavioral health EHR (Credible style)',r:'CCA, PCP, notes',m:9},
+    {n:'Availity / NaviNet style',r:'Secondary eligibility',m:35},
+    {n:'E-signature, email, drive',r:'Consents, follow-ups',m:3}];
+
+  const seedAct=[['7:58 AM','Daily EVV exception pull: 8 exceptions across 3 aggregators'],['8:12 AM','NCTracks eligibility batch: 11 active, 1 pending'],['8:40 AM','A09 renewal sent to supervisor'],['9:15 AM','Caregiver match for V.O. sent to supervisor'],['9:31 AM','New referral G.A. logged from community referral'],['10:05 AM','EVV correction request for J.T. sent to supervisor']];
+  S.activity=seedAct.map(([t,x])=>({t,x}));
+  S.audit=seedAct.map(([t,x])=>({t,who:COORD,x}));
+}
+function seedDocs(c){
+  const list=c.prog==='HC'?HC_DOCS:BH_DOCS;
+  list.forEach(d=>{let s='ok';
+    if(d==='Physician orders'&&c.svc!=='Home Health')s='na';
+    if(d==='OASIS'||d==='Incident reports')s='na';
+    if(c.stage<9&&['Visit notes','Progress notes','RN supervisory note'].includes(d))s='na';
+    S.docs[c.id+'|'+d]=s;});
+}
+
+/* ============================ logging ============================ */
+function who(){return S.role==='sup'?SUPERVISOR:COORD}
+function log(x){const t=clock();S.activity.unshift({t,x});S.audit.unshift({t,who:who(),x})}
+function toast(msg,kind=''){const el=document.createElement('div');el.className='toast '+kind;el.textContent=msg;$('#toasts').appendChild(el);setTimeout(()=>el.remove(),3600)}
+
+/* ============================ derived ============================ */
+const authFor=cid=>S.auths.filter(a=>a.cid===cid);
+const daysLeft=a=>a.end;
+const missingDocs=()=>Object.entries(S.docs).filter(([k,s])=>(s==='missing'||s==='expired')&&cl(k.split('|')[0]));
+const openEvv=()=>S.evv.filter(e=>e.status!=='verified');
+const pendingAp=()=>S.approvals.filter(a=>a.status==='pending');
+const referrals=()=>S.clients.filter(c=>c.stage<9);
+function escalated(key){const r=S.docReq[key];if(!r||!r.hist.length)return false;const last=r.hist[r.hist.length-1].at;return (Date.now()-last)/3600e3>=S.settings.esc&&(S.docs[key]==='missing'||S.docs[key]==='expired')}
+function weeklyUnits(cid){return S.sched.filter(s=>s.cid===cid).reduce((n,s)=>n+s.hrs*4,0)}
+function cutoff(){const target=S.settings.cutoff;const dow=TODAY.getDay();let add=(target-dow+7)%7;const d=dd(add);d.setHours(17,0,0,0);if(d<new Date())d.setDate(d.getDate()+7);const ms=d-new Date();const h=Math.floor(ms/3600e3);return{label:d.toLocaleDateString('en-US',{weekday:'short'})+' 5:00 PM',h,txt:h>=24?Math.floor(h/24)+'d '+(h%24)+'h':h+'h '+Math.floor(ms%3600e3/60e3)+'m'}}
+function kpis(){return{
+  newToday:S.clients.filter(c=>c.stage<9&&c.received===0).length,
+  blocked:referrals().filter(c=>c.blockers.length).length,
+  exp:S.auths.filter(a=>a.end<=30&&a.ren!=='Renewed').length,
+  evv:openEvv().length,
+  docs:missingDocs().length,
+  ready:referrals().filter(c=>c.stage>=4&&!c.blockers.length).length,
+  hold:S.visits.filter(v=>v.status!=='ready').length}}
+function queue(){
+  const q=[];
+  referrals().forEach(c=>c.blockers.forEach(b=>q.push({sev:(b.key==='1915i'||b.key==='elig'||b.key==='auth')?'crit':'warn',kind:'Referral blocker',t:`${c.ini} · ${b.label}`,m:`${c.svc} · ${c.plan} · stage: ${STAGES[c.stage]}`,btn:'Open referral',a:'drawer',id:c.id,rank:b.key==='1915i'?0:1})));
+  S.clients.filter(c=>c.alert).forEach(c=>q.push({sev:'crit',kind:'Eligibility',t:`${c.ini} · ${c.alert}`,m:'Active client. Hold new visits until coverage is confirmed.',btn:'Open client',a:'drawer',id:c.id,rank:0}));
+  S.auths.filter(a=>a.end<=30&&a.ren!=='Renewed').forEach(a=>{const c=cl(a.cid);q.push({sev:a.end<=S.settings.lead?'crit':'warn',kind:'Authorization',t:`${c.ini} · ${a.code} ends in ${a.end} days`,m:`Renewal: ${a.ren} · ${route(c.plan).auth}`,btn:'Go to renewal',a:'go',v:'auths',hl:'auth-'+a.id,rank:a.end<=S.settings.lead?1:3})});
+  openEvv().forEach(e=>{const c=cl(e.cid);q.push({sev:e.status==='pending'?'warn':'crit',kind:'EVV exception',t:`${c.ini} · ${e.type}`,m:`${route(c.plan).evv} · ${fd(e.date)} · ${e.status==='pending'?'awaiting verification':'fix before billing cutoff'}`,btn:'Resolve',a:'go',v:'evv',hl:'evv-'+e.id,rank:e.status==='pending'?4:2})});
+  missingDocs().forEach(([k,s])=>{const [cid,d]=k.split('|');const c=cl(cid);const esc=escalated(k);q.push({sev:esc?'crit':'warn',kind:'Document',t:`${c.ini} · ${d} ${s}`,m:`Owner: ${DOC_OWNER[d]}${esc?' · no response in '+S.settings.esc+'h, escalate':''}`,btn:'Follow up',a:'doc',k,rank:esc?1:5})});
+  const o={crit:0,warn:1};
+  return q.sort((a,b)=>o[a.sev]-o[b.sev]||a.rank-b.rank);
+}
+
+/* ============================ rendering ============================ */
+const NAV=[
+  ['Today',[['command','Command Center'],['approvals','Approvals Queue']]],
+  ['Intake',[['pipeline','Referral Pipeline'],['eligibility','Eligibility & Payers'],['auths','Authorizations']]],
+  ['Compliance',[['evv','EVV Exceptions'],['docs','Document Compliance'],['bh','Behavioral Health']]],
+  ['Operations',[['schedule','Scheduling & Staffing'],['billing','Billing Readiness'],['followups','Follow-ups'],['eod','End-of-Day Report'],['audit','Audit & Settings']]]];
+function navCount(v){const k=kpis();return{pipeline:[referrals().length,k.blocked?'crit':''],auths:[k.exp,k.exp?'crit':''],evv:[k.evv,k.evv?'crit':''],docs:[k.docs,k.docs?'crit':''],approvals:[pendingAp().length,pendingAp().length&&S.role==='sup'?'crit':''],followups:[S.tasks.filter(t=>t.status==='open').length,'']}[v]}
+function renderChrome(){
+  $('#rail').innerHTML=NAV.map(([g,items])=>`<div class="grp">${g}</div>`+items.map(([v,l])=>{const c=navCount(v);return`<button data-a="go" data-v="${v}" class="${S.view===v?'on':''}">${ic(v)}<span>${l}</span>${c&&c[0]?`<span class="cnt ${c[1]}">${c[0]}</span>`:''}</button>`}).join('')).join('');
+  $('#r-coord').className=S.role==='coord'?'on':'';$('#r-sup').className=S.role==='sup'?'on':'';
+  const n=pendingAp().length;$('#bell').innerHTML=ic('bell')+(n?`<span class="dot">${n}</span>`:'');
+}
+function render(){
+  renderChrome();
+  $('#main').innerHTML=(VIEWS[S.view]||VIEWS.command)();
+  if(S.drawer)renderDrawer();
+}
+function head(t,sub,actions=''){return`<div class="page-head"><div><h1>${t}</h1><p class="sub">${sub}</p></div><div class="head-actions">${actions}</div></div>`}
+function busyBtn(key,label,cls='btn btn-s',a='',data=''){const b=S.busy[key];return`<button class="${cls}" data-a="${a}" ${data} ${b?'disabled':''}>${b?'<span class="spin"></span> Working':label}</button>`}
+const sevChip=(s,t)=>`<span class="chip ${s==='crit'?'c-crit':s==='warn'?'c-warn':s==='ok'?'c-ok':'c-info'}">${t}</span>`;
+const guard=`<p class="guard">${ic('audit',14)} Coordinator prepares and routes. Service starts, authorizations, EVV corrections and billing are approved by a supervisor.</p>`;
+
+const VIEWS={
+command(){
+  const k=kpis();const q=queue();S._q=q;
+  const tile=(v,l,view,cls)=>`<button class="kpi ${cls}" data-a="go" data-v="${view}"><span class="v">${v}</span><span class="l">${l}</span></button>`;
+  return head('Command Center',`${fdw(0)} · Wayne County, NC · ${S.role==='sup'?'Supervisor view':'Coordinator view'}`,busyBtn('sync',ic('sync',15)+' Sync all sources','btn','sync'))+
+  `<div class="kpis">${tile(k.newToday,'New referrals today','pipeline','')}${tile(k.blocked,'Referrals blocked','pipeline',k.blocked?'crit':'')}${tile(k.exp,'Auths expiring in 30 days','auths',k.exp?'warn':'')}${tile(k.evv,'Open EVV exceptions','evv',k.evv?'crit':'')}${tile(k.docs,'Missing documents','docs',k.docs?'warn':'')}${tile(k.ready,'Clients ready to start','pipeline','ok')}${tile(k.hold,'Visits on billing hold','billing',k.hold?'warn':'')}</div>
+  <div class="grid-2"><section class="panel"><div class="panel-h"><h2>My priority queue</h2><span class="chip">${q.length} items · billing cutoff ${cutoff().label}</span></div>
+  <div class="qlist">${q.map((x,i)=>`<div class="qi"><span class="sev ${x.sev}"></span><div class="body"><div class="kind">${x.kind}</div><div class="t">${x.t}</div><div class="m">${x.m}</div></div><button class="btn btn-s" data-a="qa" data-i="${i}">${x.btn}</button></div>`).join('')||'<div class="empty">Queue is clear.</div>'}</div></section>
+  <div class="stack"><section class="panel"><div class="panel-h"><h2>Connected sources</h2><span class="chip c-info">Simulated</span></div><div class="srcs">${S.sources.map(s=>`<div class="src"><div><div>${s.n}</div><div class="role">${s.r}</div></div><span class="muted num" style="font-size:12px;white-space:nowrap">${S.busy.sync?'<span class="spin"></span>':s.m===0?'just now':s.m+' min ago'}</span></div>`).join('')}</div></section>
+  <section class="panel"><div class="panel-h"><h2>Today's activity</h2></div><div class="feed">${S.activity.slice(0,40).map(a=>`<div><span class="tm">${a.t}</span><span>${a.x}</span></div>`).join('')}</div></section></div></div>`;
+},
+pipeline(){
+  const cols=STAGES.map((s,i)=>{const cs=S.clients.filter(c=>c.stage===i);
+    if(i===9)return`<div class="col"><div class="col-h"><span>${s}</span><span>${cs.length}</span></div>${cs.map(c=>`<button class="mini" data-a="drawer" data-id="${c.id}"><b>${c.ini}</b><span class="muted">${c.svc.replace('1915(i) ','1915(i) ').slice(0,18)}</span></button>`).join('')}</div>`;
+    return`<div class="col"><div class="col-h"><span>${s}</span><span>${cs.length}</span></div>${cs.map(card).join('')}</div>`}).join('');
+  return head('Referral Pipeline','Referral → eligibility → authorization → documents → staffing → first visit → EVV → active. Cards cannot advance past an open blocker.')+`<div class="board">${cols}</div>`+guard;
+},
+eligibility(){
+  return head('Eligibility & Payers','NCTracks is the real-time eligibility source. Re-check before every first visit, even when the client has a plan card.')+
+  `<div class="tblwrap"><table><thead><tr><th>Client</th><th>Plan</th><th>Check path</th><th>Last check</th><th>Result</th><th></th></tr></thead><tbody>${S.clients.map(c=>{const r=c.elig.result;const s=r==='Active'?'ok':r==='Inactive'?'crit':'warn';return`<tr data-hl="elig-${c.id}"><td class="nw"><button class="clickname" data-a="drawer" data-id="${c.id}">${c.ini}</button> <span class="mono muted">${c.id}</span></td><td>${c.plan}</td><td class="muted">${route(c.plan).elig}</td><td class="nw num">${c.elig.date===0?'Today '+(c.elig.t||''):fd(c.elig.date)}</td><td>${sevChip(s,r)}${c.elig.note?`<div class="muted" style="font-size:12px;margin-top:3px;max-width:320px">${c.elig.note}</div>`:''}</td><td class="nw">${busyBtn('el-'+c.id,'Run NCTracks check','btn btn-s','elig',`data-id="${c.id}"`)}</td></tr>`}).join('')}</tbody></table></div>
+  <section class="panel" style="margin-top:16px"><div class="panel-h"><h2>Where each plan routes</h2></div>${routeTable()}</section>`;
+},
+auths(){
+  let list=S.auths.filter(a=>cl(a.cid));if(S.authExp)list=list.filter(a=>a.end<=30);
+  list.sort((a,b)=>a.end-b.end);
+  return head('Authorizations',`Renewals go out ${S.settings.lead} calendar days before the end date so service continues without a gap.`,`<label class="btn"><input type="checkbox" id="authExp" ${S.authExp?'checked':''}> Expiring in 30 days</label>`)+
+  `<div class="tblwrap"><table><thead><tr><th>Client</th><th>Auth #</th><th>Service code</th><th>Units used</th><th>Dates</th><th>Days left</th><th>Renewal</th></tr></thead><tbody>${list.map(a=>{const c=cl(a.cid);const pct=Math.round(a.used/a.units*100);const rem=a.units-a.used;const wk=weeklyUnits(a.cid);const over=wk>rem&&a.end>7;const ds=a.end<=7?'crit':a.end<=14?'crit':a.end<=30?'warn':'ok';
+    return`<tr data-hl="auth-${a.id}"><td class="nw"><button class="clickname" data-a="drawer" data-id="${c.id}">${c.ini}</button><div class="muted" style="font-size:12px">${c.plan}</div></td><td class="mono nw">${a.num}</td><td><b>${a.code}</b><div class="muted" style="font-size:12px">${a.svc}</div></td><td style="min-width:150px"><div class="bar ${pct>=95?'crit':pct>=80?'warn':''}"><i style="width:${Math.min(pct,100)}%"></i></div><div class="num muted" style="font-size:12px;margin-top:3px">${a.used} / ${a.units} units (${pct}%)</div>${over?`<div class="chip c-crit" style="margin-top:4px">Scheduled ${wk} units/wk exceeds ${rem} left</div>`:''}</td><td class="nw num">${fd(a.start)} – ${fd(a.end)}</td><td>${sevChip(ds,a.end+' days')}</td><td class="nw">${renewCell(a)}</td></tr>`}).join('')}</tbody></table></div>`+guard;
+},
+evv(){
+  const co=cutoff();const aggs=['All','HHAeXchange','Sandata','CareBridge'];
+  let list=openEvv();if(S.evvAgg!=='All')list=list.filter(e=>route(cl(e.cid).plan).evv===S.evvAgg);
+  const ver=S.evv.filter(e=>e.status==='verified');
+  return head('EVV Exceptions','Daily exception pull from all three NC aggregators. Every visit must carry the six federal EVV data elements before it can bill.',`<span class="chip c-warn">Billing cutoff ${co.label} · ${co.txt}</span><select id="evvAgg" class="btn" aria-label="Aggregator">${aggs.map(a=>`<option ${S.evvAgg===a?'selected':''}>${a}</option>`).join('')}</select>`)+
+  `<div class="stack">${list.map(excCard).join('')||'<div class="panel empty">No open exceptions for this aggregator.</div>'}</div>
+  <section class="panel" style="margin-top:16px"><div class="panel-h"><h2>Verified for billing</h2><span class="chip c-ok">${ver.length}</span></div>${ver.length?`<div class="tblwrap"><table><thead><tr><th>Client</th><th>Exception</th><th>Aggregator</th><th>Reason code</th></tr></thead><tbody>${ver.map(e=>{const c=cl(e.cid);return`<tr><td>${c.ini}</td><td>${e.type}</td><td>${route(c.plan).evv}</td><td>${e.reason||'Corrected at source'}</td></tr>`}).join('')}</tbody></table></div>`:'<p class="muted">Exceptions move here once a supervisor verifies the correction.</p>'}</section>`+guard;
+},
+docs(){
+  const tab=S.docTab;const docs=tab==='HC'?HC_DOCS:BH_DOCS;const cs=S.clients.filter(c=>c.prog===tab);
+  const sym={ok:'✓',na:'–',missing:'!',expired:'✕',expiring:'◷'};
+  const open=Object.keys(S.docReq).filter(k=>S.docs[k]==='missing'||S.docs[k]==='expired');
+  return head('Document Compliance','Click any flagged cell to request, escalate or mark the document received.',`<div class="tabs"><button data-a="docTab" data-t="HC" class="${tab==='HC'?'on':''}">Home care</button><button data-a="docTab" data-t="BH" class="${tab==='BH'?'on':''}">Behavioral health</button></div>`)+
+  `<div class="legend" style="margin-bottom:10px"><span><b style="color:var(--green)">✓</b> Received</span><span><b style="color:var(--red)">!</b> Missing</span><span><b style="color:var(--red)">✕</b> Expired</span><span><b style="color:var(--amber)">◷</b> Expiring soon</span><span>– Not applicable${tab==='HC'?' (OASIS applies to Medicare home health only)':''}</span></div>
+  <div class="tblwrap mx"><table><thead><tr><th>Client</th>${docs.map(d=>`<th style="text-align:center">${d}</th>`).join('')}</tr></thead><tbody>${cs.map(c=>`<tr><td class="nw"><button class="clickname" data-a="drawer" data-id="${c.id}">${c.ini}</button> <span class="muted" style="font-size:12px">${c.svc.replace(' Community Living and Support',' CLS').replace(' Individual and Transitional Support',' ITS')}</span></td>${docs.map(d=>{const k=c.id+'|'+d;const s=S.docs[k]||'na';const esc=escalated(k);return`<td class="st"><button class="dst ${s}" data-hl="doc-${c.id}-${d}" ${['missing','expired','expiring'].includes(s)?`data-a="doc" data-k="${k}"`:''} title="${d}: ${s}${esc?' (escalate)':''}" aria-label="${c.ini} ${d} ${s}">${sym[s]}${esc?'<sup>⏱</sup>':''}</button></td>`}).join('')}</tr>`).join('')}</tbody></table></div>
+  <section class="panel" style="margin-top:16px"><div class="panel-h"><h2>Open requests</h2><span class="chip">Escalate after ${S.settings.esc}h with no response</span></div>${open.length?`<div class="qlist">${open.map(k=>{const [cid,d]=k.split('|');const c=cl(cid);const r=S.docReq[k];const last=r.hist[r.hist.length-1];const h=Math.floor((Date.now()-last.at)/3600e3);const esc=escalated(k);return`<div class="qi"><span class="sev ${esc?'crit':'warn'}"></span><div class="body"><div class="t">${c.ini} · ${d}</div><div class="m">${r.hist.length} attempt${r.hist.length>1?'s':''} · last to ${last.to} via ${last.ch} · ${h}h ago${r.deadline?' · due '+r.deadline:''}</div></div>${esc?sevChip('crit','Escalate'):''}<button class="btn btn-s" data-a="doc" data-k="${k}">Open</button></div>`}).join('')}</div>`:'<p class="muted">No open requests.</p>'}</section>`;
+},
+bh(){
+  const cs=S.clients.filter(c=>c.prog==='BH');
+  return head('Behavioral Health','Peer Support and 1915(i) services (Community Living and Support, Individual and Transitional Support, Individual Placement and Support, Respite). A CCA by a licensed clinician and a signed Person-Centered Plan come before service start.')+
+  `<div class="grid-3">${cs.map(c=>{const r=bhReady(c);const pct=Math.round(r.filter(x=>x[1]).length/r.length*100);const auth=authFor(c.id)[0];return`<section class="panel" data-hl="bh-${c.id}"><div class="panel-h"><div><h2><button class="clickname" data-a="drawer" data-id="${c.id}">${c.ini}</button> <span class="mono muted">${c.id}</span></h2><div class="muted" style="font-size:12.5px">${c.svc} · ${c.plan}</div></div>${sevChip(pct===100?'ok':pct>=67?'warn':'crit',pct+'% ready')}</div>
+  ${flag1915(c)?`<div class="flag" style="margin-bottom:10px">1915(i) is not covered on a Standard Plan.</div>`:''}
+  <dl class="kv"><dt>Care manager</dt><dd>${c.tcm||'—'}</dd><dt>CCA</dt><dd>${c.cca?fd(c.cca.date)+' · '+c.cca.clin:'<span style="color:var(--red)">Not on file</span>'}</dd><dt>Person-Centered Plan</dt><dd>${c.pcp?c.pcp.status+(c.pcp.review!=null?' · review '+fd(c.pcp.review):''):'<span style="color:var(--red)">Not started</span>'}</dd><dt>Service order</dt><dd>${c.so||'—'}</dd><dt>Authorization</dt><dd>${auth?auth.code+' · ends '+fd(auth.end):'None on file'}</dd><dt>Next session</dt><dd>${c.next!=null?fdw(c.next)+' · '+cgName(c.cg):'Not scheduled'}</dd><dt>Note completion</dt><dd>${c.noteRate!=null?`<div class="bar ${c.noteRate<80?'crit':c.noteRate<90?'warn':''}" style="margin-top:6px"><i style="width:${c.noteRate}%"></i></div><span class="num muted" style="font-size:12px">${c.noteRate}% of sessions noted within 24h</span>`:'No sessions yet'}</dd></dl>
+  <div class="dsec"><h3>Service-start readiness</h3><div class="check">${r.map(([l,ok])=>`<div><span class="ck ${ok?'y':'n'}">${ok?'✓':'!'}</span>${l}</div>`).join('')}</div></div></section>`}).join('')}</div>`;
+},
+schedule(){
+  const days=[...Array(7)].map((_,i)=>S.weekStart+i);
+  const staff=[...S.cgs,...S.peers];
+  const cells=staff.map(g=>`<div><b>${g.name.split(',')[0]}</b></div>`+days.map(d=>`<div class="${d===0?'today':''}">${S.sched.filter(s=>s.cg===g.id&&s.day===d).map(s=>`<span class="vis ${s.isNew?'new':''}">${cl(s.cid).ini} ${s.start}–${s.end}</span>`).join('')}</div>`).join('')).join('');
+  const needs=S.clients.filter(c=>c.stage>=3&&c.stage<=5&&!c.cg);
+  const cand=S.matchRes;
+  return head('Scheduling & Staffing',`Week of ${fd(S.weekStart)}. Matches are suggested here and approved by a supervisor.`)+
+  `<div class="tblwrap" data-hl="calendar"><div class="cal"><div class="hd">Staff</div>${days.map(d=>`<div class="hd ${d===0?'today':''}">${fdw(d)}</div>`).join('')}${cells}</div></div>
+  <div class="grid-2" style="margin-top:16px"><section class="panel" data-hl="match"><div class="panel-h"><h2>Suggest a match</h2></div>
+  <div class="row"><label class="field" style="flex:1"><span>Client needing staff</span><select id="matchFor">${needs.map(c=>`<option value="${c.id}" ${S.matchFor===c.id?'selected':''}>${c.ini} · ${c.svc} · ${c.town}</option>`).join('')||'<option>No clients waiting</option>'}</select></label>${busyBtn('match','Suggest match','btn btn-p','suggest')}</div>
+  ${cand&&cand.cid===S.matchFor?`<div class="qlist" style="margin-top:12px">${cand.list.map((m,i)=>`<div class="qi"><span class="sev ${i===0?'ok':''}"></span><div class="body"><div class="t">${i+1}. ${m.g.name} · score ${m.score}</div><div class="m">${m.why.join(' · ')}</div></div><button class="btn btn-s ${i===0?'btn-p':''}" data-a="sendMatch" data-cg="${m.g.id}">Send to Supervisor for Approval</button></div>`).join('')}</div>`:''}</section>
+  <section class="panel"><div class="panel-h"><h2>Caregiver roster</h2></div><div class="tblwrap"><table><thead><tr><th>Name</th><th>Skills</th><th>Availability</th><th>Credentials</th></tr></thead><tbody>${S.cgs.map(g=>{const cr=[['CPR',g.cpr],['TB',g.tb],['Background',g.bg]];return`<tr><td class="nw"><b>${g.name}</b><div class="muted" style="font-size:12px">${g.town} · ${g.lang.join(', ')}</div></td><td>${g.skills.join(', ')}</td><td class="nw">${g.avail}</td><td>${cr.map(([n,d])=>d<0?sevChip('crit',n+' expired'):d<=30?sevChip('warn',n+' '+d+'d'):'').join(' ')||sevChip('ok','Current')}</td></tr>`}).join('')}</tbody></table></div></section></div>`;
+},
+billing(){
+  const g={ready:[],evv:[],auth:[],note:[]};S.visits.forEach(v=>g[v.status].push(v));
+  const lab={ready:'Verified and ready',evv:'On hold: EVV exception',auth:'On hold: no or exceeded authorization',note:'On hold: missing note'};
+  const holds=['evv','auth','note'];const max=Math.max(1,...holds.map(h=>g[h].length));
+  const col={evv:'var(--red)',auth:'var(--amber)',note:'var(--teal)'};
+  const list=k=>`<section class="panel" data-hl="bill-${k}"><div class="panel-h"><h2>${lab[k]}</h2>${sevChip(k==='ready'?'ok':'warn',g[k].length+' visits')}</div>${g[k].length?`<div class="tblwrap"><table><thead><tr><th>Visit</th><th>Client</th><th>Staff</th><th>Date</th><th>Hours</th></tr></thead><tbody>${g[k].slice(0,k==='ready'?8:20).map(v=>`<tr><td class="mono">${v.id}</td><td>${cl(v.cid).ini}</td><td>${cgName(v.cg)}</td><td class="num">${fd(v.day)}</td><td class="num">${v.hrs}</td></tr>`).join('')}</tbody></table></div>${k==='ready'&&g[k].length>8?`<p class="muted" style="margin-top:6px;font-size:12px">+${g[k].length-8} more</p>`:''}`:'<p class="muted">None.</p>'}</section>`;
+  return head('Billing Readiness','Visits are checked against EVV, authorization and documentation. Claims are prepared and submitted by the billing team, not from here.',busyBtn('batch',`Send ready batch (${g.ready.length}) to Billing for review`,'btn btn-p','batch'))+
+  `<section class="panel" style="margin-bottom:16px"><div class="panel-h"><h2>Why visits are on hold</h2></div><div class="stack" style="gap:10px">${holds.map(h=>`<div class="hbar"><span>${lab[h].replace('On hold: ','')}</span><span class="t"><i style="width:${g[h].length/max*100}%;background:${col[h]}"></i></span><b class="num">${g[h].length}</b></div>`).join('')}</div>${S.batchSent?`<p class="muted" style="margin-top:10px">${S.batchSent}</p>`:''}</section>
+  <div class="grid-2">${list('ready')}<div class="stack">${list('evv')}${list('auth')}${list('note')}</div></div>`;
+},
+followups(){
+  const list=S.tasks.filter(t=>S.taskFilter==='all'||t.status===S.taskFilter);
+  return head('Follow-ups','Every request, call and escalation in one list. Messages carry client initials and item details only.',`<div class="tabs"><button data-a="tf" data-f="open" class="${S.taskFilter==='open'?'on':''}">Open</button><button data-a="tf" data-f="done" class="${S.taskFilter==='done'?'on':''}">Done</button><button data-a="tf" data-f="all" class="${S.taskFilter==='all'?'on':''}">All</button></div><button class="btn btn-p" data-a="compose">New message from template</button>`)+
+  `<div class="tblwrap"><table><thead><tr><th>Client</th><th>Follow-up</th><th>Owner</th><th>Channel</th><th>Due</th><th>Attempts</th><th></th></tr></thead><tbody>${list.map(t=>{const c=cl(t.cid);return`<tr data-hl="task-${t.id}"><td class="nw">${c?`<button class="clickname" data-a="drawer" data-id="${c.id}">${c.ini}</button>`:'—'}</td><td>${t.text}</td><td class="nw">${t.owner}</td><td class="nw">${t.ch}</td><td class="nw">${t.due}</td><td class="num">${t.att}</td><td class="nw">${t.status==='open'?`<button class="btn btn-s" data-a="taskDone" data-id="${t.id}">Mark done</button>`:sevChip('ok','Done')}</td></tr>`}).join('')||'<tr><td colspan="7" class="empty">Nothing here.</td></tr>'}</tbody></table></div>`;
+},
+eod(){
+  return head('End-of-Day Report','Built from what happened in OneWindow today. Review, then send to your supervisor.',`${busyBtn('eod','Generate today\'s report','btn btn-p','eodGen')}${S.eod?`<button class="btn" data-a="copy">Copy</button>${busyBtn('eodSend','Email to supervisor (simulated)','btn','eodSend')}`:''}`)+
+  (S.eod?`<div class="panel" data-hl="eod"><div class="report" id="eodText">${S.eod}</div></div>`:`<div class="panel empty" data-hl="eod">Generate the report to see today's referrals, eligibility checks, authorizations, EVV exceptions, document follow-ups and open items.</div>`);
+},
+audit(){
+  return head('Audit & Settings','Every simulated action is recorded. Medicaid IDs stay masked unless someone records a reason to view them.')+
+  `<div class="grid-2"><section class="panel"><div class="panel-h"><h2>Audit trail</h2><span class="chip">${S.audit.length} entries</span></div><div class="tblwrap" style="max-height:520px;overflow:auto"><table><thead><tr><th>Time</th><th>User</th><th>Action</th></tr></thead><tbody>${S.audit.map(a=>`<tr><td class="num nw">${a.t}</td><td class="nw">${a.who}</td><td>${a.x}</td></tr>`).join('')}</tbody></table></div></section>
+  <div class="stack"><section class="panel"><div class="panel-h"><h2>Settings</h2></div><div class="stack" style="gap:12px">
+  <label class="field"><span>Authorization renewal lead time (calendar days)</span><input id="set-lead" type="number" min="1" max="60" value="${S.settings.lead}"></label>
+  <label class="field"><span>Escalate document requests after (hours)</span><input id="set-esc" type="number" min="1" max="120" value="${S.settings.esc}"></label>
+  <label class="field"><span>Billing cutoff day</span><select id="set-cut">${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map((d,i)=>`<option value="${i}" ${S.settings.cutoff===i?'selected':''}>${d}, 5:00 PM</option>`).join('')}</select></label></div></section>
+  <section class="panel"><div class="panel-h"><h2>Aggregator mapping</h2></div>${routeTable()}</section></div></div>`;
+},
+approvals(){
+  const p=pendingAp();const done=S.approvals.filter(a=>a.status!=='pending');
+  const sup=S.role==='sup';
+  return head('Approvals Queue',sup?'Items coordinators have prepared for your decision.':'Items you sent for a supervisor decision. Switch to Supervisor to act on them.')+
+  `<div class="qlist">${p.map(a=>{const c=cl(a.cid);return`<div class="qi" data-hl="ap-${a.id}"><span class="sev warn"></span><div class="body"><div class="kind">${({renewal:'Authorization renewal',match:'Caregiver match',evv:'EVV correction',start:'Service start',escalation:'Escalation',docesc:'Document escalation'})[a.kind]}</div><div class="t">${a.label}</div><div class="m">${c?c.ini+' · '+c.plan+' · ':''}${a.detail} · sent ${a.at}</div></div>${sup?`${busyBtn('ap-'+a.id,'Approve','btn btn-s btn-p','approve',`data-id="${a.id}"`)}<button class="btn btn-s" data-a="returnAp" data-id="${a.id}">Return</button>`:sevChip('warn','Awaiting supervisor')}</div>`}).join('')||'<div class="panel empty">Nothing waiting.</div>'}</div>
+  ${done.length?`<section class="panel" style="margin-top:16px"><div class="panel-h"><h2>Decided today</h2></div><div class="qlist">${done.map(a=>`<div class="qi"><span class="sev ${a.status==='approved'?'ok':'warn'}"></span><div class="body"><div class="t">${a.label}</div><div class="m">${a.status==='approved'?'Approved':'Returned'} by ${SUPERVISOR}</div></div></div>`).join('')}</div></section>`:''}`;
+}};
+
+function routeTable(){return`<div class="tblwrap"><table><thead><tr><th>Plan</th><th>Eligibility</th><th>Authorization</th><th>EVV aggregator</th></tr></thead><tbody>${[['NC Medicaid Direct','NC Medicaid Direct'],['Standard Plan (AmeriHealth Caritas, Carolina Complete, UHC Community, WellCare)','WellCare of NC'],['Standard Plan (Healthy Blue)','Healthy Blue'],['Tailored Plan (Trillium)','Trillium Tailored Plan']].map(([l,p])=>{const r=route(p);return`<tr><td>${l}</td><td>${r.elig}</td><td>${r.auth}</td><td><b>${r.evv}</b></td></tr>`}).join('')}</tbody></table></div><p class="muted" style="font-size:12px;margin-top:8px">1915(i) services are available only through a Tailored Plan, NC Medicaid Direct or the EBCI Tribal Option.</p>`}
+function card(c){
+  const msg=S.cardMsg[c.id];
+  return`<div class="card" data-hl="card-${c.id}"><div class="top-l"><button class="clickname ini" data-a="drawer" data-id="${c.id}">${c.ini}</button><span class="chip">${c.since===0?'today':c.since+'d in stage'}</span></div>
+  <div class="svc">${c.svc}</div><div class="pl">${c.plan} · ${c.town}</div>
+  ${c.blockers.length?`<div class="chips">${c.blockers.map(b=>`<span class="chip c-crit">${b.label}</span>`).join('')}</div>`:'<div class="chips"><span class="chip c-ok">No blockers</span></div>'}
+  ${msg?`<div class="msg" role="status">${msg}</div>`:''}
+  <div class="acts"><button class="btn btn-s" data-a="drawer" data-id="${c.id}">Open</button><button class="btn btn-s ${c.blockers.length?'':'btn-p'}" data-a="advance" data-id="${c.id}" title="${c.blockers.length?'Blocked: '+c.blockers.map(b=>b.label).join(', '):'Move to '+STAGES[c.stage+1]}">${c.stage===8?'Send start to Supervisor':'Advance →'}</button></div></div>`;
+}
+function renewCell(a){
+  if(a.end>30&&a.ren==='Not started')return'<span class="muted">Not due</span>';
+  const b=(label,cls='btn btn-s')=>busyBtn('rn-'+a.id,label,cls,'renew',`data-id="${a.id}"`);
+  switch(a.ren){
+    case'Not started':return b('Gather documents');
+    case'Documents gathered':return b('Send to Supervisor for Approval','btn btn-s btn-p');
+    case'Sent to supervisor':return sevChip('warn','Awaiting supervisor');
+    case'Submitted to payer':return sevChip('info','Submitted to payer')+' '+b('Check payer status');
+    case'Awaiting decision':return sevChip('info','Awaiting decision')+' '+b('Check payer status');
+    case'Renewed':return sevChip('ok','Renewed');
+    case'Denied':return sevChip('crit','Denied');
+  }return'';
+}
+function excCard(e){
+  const c=cl(e.cid);const agg=route(c.plan).evv;
+  const els=[['service','Service type',c.svc],['client','Client',c.ini+' · '+c.id],['caregiver','Caregiver',cgName(e.cg)],['date','Date',fd(e.date)],['location','Location',e.el==='location'?e.actual:'Service address on file'],['time','Start and end time',e.el==='time'?e.actual:e.sched]];
+  return`<div class="exc" data-hl="evv-${e.id}"><span class="sev ${e.status==='pending'?'warn':'crit'}"></span><div class="body"><div class="row between"><div><b>${e.type}</b> <span class="muted">· ${c.ini} · ${fdw(e.date)} · scheduled ${e.sched}</span></div><div class="row">${sevChip('info',agg)}${e.status==='pending'?sevChip('warn','Corrected, pending verification'):sevChip('crit','Open')}</div></div>
+  <div class="els">${els.map(([k,l,v])=>`<div class="el ${k===e.el?'bad':''}"><small>${l}${k===e.el?' · fails':''}</small><b>${v}</b></div>`).join('')}</div>
+  <div class="row"><span class="muted" style="font-size:12px">Reason code:</span><select id="rc-${e.id}" data-rc="${e.id}" class="btn btn-s" aria-label="Reason code">${['','Caregiver forgot to clock out','Device or app failure','Telephony unavailable','Service location changed (documented)','Worker registration pending','Other (note required)'].map(r=>`<option value="${r}" ${e.reason===r?'selected':''}>${r||'Select reason'}</option>`).join('')}</select>
+  ${e.status==='open'?`<button class="btn btn-s" data-a="msgCg" data-id="${e.id}">Message caregiver</button>${busyBtn('rq-'+e.id,'Request correction from supervisor','btn btn-s','evvReq',`data-id="${e.id}"`)}${busyBtn('mk-'+e.id,'Mark corrected, pending verification','btn btn-s btn-p','evvMark',`data-id="${e.id}"`)}`:'<span class="muted" style="font-size:12px">Sent to supervisor for verification</span>'}
+  ${e.attempts?`<span class="chip">${e.attempts} message${e.attempts>1?'s':''} sent</span>`:''}</div></div></div>`;
+}
+function bhReady(c){const a=authFor(c.id)[0];return[['CCA by licensed clinician',!!c.cca],['Person-Centered Plan signed',!!(c.pcp&&c.pcp.status==='Signed')],['Service order on file',c.so==='On file'],['Authorization on file',!!a],['Plan covers this service',!flag1915(c)],['Staff assigned',!!c.cg]]}
+
+/* ============================ drawer ============================ */
+function openDrawer(id){S.drawer=id;S.revealAsk=null;renderDrawer();$('#drawer').hidden=false;$('#scrim').hidden=false}
+function closeDrawer(){S.drawer=null;$('#drawer').hidden=true;$('#scrim').hidden=true}
+function renderDrawer(){
+  const c=cl(S.drawer);if(!c){closeDrawer();return}
+  const r=route(c.plan);const auths=authFor(c.id);const docs=(c.prog==='HC'?HC_DOCS:BH_DOCS).map(d=>[d,S.docs[c.id+'|'+d]||'na']);
+  const miss=docs.some(([,s])=>s==='missing'||s==='expired');
+  const chk=[['Referral logged',c.stage>=1],['Eligibility verified in NCTracks',c.stage>=2||(c.stage===9)],['Authorization on file',auths.length>0],['Required documents complete',!miss],['Staff assigned and approved',!!c.cg],['First visit scheduled',c.stage>=6],['EVV set up ('+(evvApplies(c.svc)?r.evv:'not EVV-subject')+')',c.stage>=7],['First visit monitored',c.stage>=8]];
+  const done=chk.filter(x=>x[1]).length;const ev=S.evv.filter(e=>e.cid===c.id);const tasks=S.tasks.filter(t=>t.cid===c.id);
+  const idShown=S.revealed[c.id];
+  $('#drawer').innerHTML=`<div class="row between"><div><div class="muted" style="font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700">${c.prog==='HC'?'Home care':'Behavioral health'} · ${STAGES[c.stage]}</div><h1 style="margin-top:2px">${c.ini} <span class="mono muted">${c.id}</span></h1><p class="sub">${c.svc} · ${c.town}, NC · source: ${c.src}</p></div><button class="iconbtn" data-a="closeDrawer" aria-label="Close">${ic('x')}</button></div>
+  ${flag1915(c)?`<div class="flag" style="margin-top:12px">1915(i) services are only available through a Tailored Plan, NC Medicaid Direct or the EBCI Tribal Option. Escalate to supervisor; member may need to request a plan change through the NC Medicaid Enrollment Broker.<div style="margin-top:8px">${busyBtn('esc-'+c.id,'Escalate to Supervisor','btn btn-s btn-danger','escalate',`data-id="${c.id}"`)}</div></div>`:''}
+  ${c.alert?`<div class="flag" style="margin-top:12px">${c.alert}. Hold new visits until coverage is confirmed.</div>`:''}
+  <div class="dsec"><h3>Identity (minimum necessary)</h3><dl class="kv"><dt>Medicaid ID</dt><dd class="mono">${idShown?'DEMO-90021'+c.mid:'DEMO-****'+c.mid} ${idShown?'':`<button class="btn btn-s" data-a="revealAsk">Reveal</button>`}</dd><dt>Plan</dt><dd>${c.plan}</dd><dt>Last eligibility</dt><dd>${c.elig.result} · ${c.elig.date===0?'today':fd(c.elig.date)}</dd>${c.cg?`<dt>Assigned staff</dt><dd>${cgName(c.cg)}</dd>`:''}</dl>
+  ${S.revealAsk?`<div class="row" style="margin-top:6px"><label class="field" style="flex:1"><span>Reason for viewing full ID (logged)</span><input id="revealReason" placeholder="e.g. Payer portal lookup for auth renewal"></label><button class="btn btn-s btn-p" data-a="reveal">Confirm</button></div>`:''}</div>
+  <div class="dsec"><h3>Payer routing</h3><div class="route"><div><small>Eligibility</small><b>${r.elig}</b></div><div><small>Authorization</small><b>${r.auth}</b></div><div><small>EVV</small><b>${evvApplies(c.svc)?r.evv:'Not EVV-subject'}</b></div></div><p class="muted" style="font-size:12px">${r.type}</p></div>
+  ${c.stage<9?`<div class="dsec"><h3>Readiness · ${done} of ${chk.length}</h3><div class="bar"><i style="width:${done/chk.length*100}%"></i></div><div class="check">${chk.map(([l,ok])=>`<div><span class="ck ${ok?'y':''}">${ok?'✓':''}</span>${l}</div>`).join('')}</div>
+  ${c.blockers.length?`<div class="chips row">${c.blockers.map(b=>`<span class="chip c-crit">${b.label}</span>`).join('')}</div>`:''}
+  <div class="row">${busyBtn('dl-'+c.id,'Run NCTracks check','btn btn-s','elig',`data-id="${c.id}"`)}<button class="btn btn-s ${c.blockers.length?'':'btn-p'}" data-a="advance" data-id="${c.id}">${c.stage===8?'Send service start to Supervisor':'Advance to '+STAGES[c.stage+1]}</button></div>${S.cardMsg[c.id]?`<div class="card" style="box-shadow:none;padding:0;border:0"><div class="msg">${S.cardMsg[c.id]}</div></div>`:''}</div>`:''}
+  <div class="dsec"><h3>Documents</h3><div class="row">${docs.filter(([,s])=>s!=='na').map(([d,s])=>`<span class="chip ${s==='ok'?'c-ok':s==='expiring'?'c-warn':'c-crit'}" ${s!=='ok'?`data-a="doc" data-k="${c.id}|${d}" style="cursor:pointer"`:''}>${d}${s!=='ok'?': '+s:''}</span>`).join('')}</div></div>
+  <div class="dsec"><h3>Authorizations</h3>${auths.length?auths.map(a=>`<div class="row between" style="font-size:13px"><span><b>${a.code}</b> <span class="mono muted">${a.num}</span></span><span class="num">${a.used}/${a.units} units · ${fd(a.start)}–${fd(a.end)}</span></div>`).join(''):'<p class="muted">None on file.</p>'}</div>
+  <div class="dsec"><h3>Schedule and EVV</h3>${S.sched.filter(s=>s.cid===c.id).map(s=>`<div style="font-size:13px">${fdw(s.day)} · ${s.start}–${s.end} · ${cgName(s.cg)}</div>`).join('')||'<p class="muted">No visits scheduled.</p>'}${ev.map(e=>`<div style="font-size:13px">${sevChip(e.status==='verified'?'ok':e.status==='pending'?'warn':'crit',e.status)} ${e.type} · ${fd(e.date)}</div>`).join('')}</div>
+  <div class="dsec"><h3>Follow-up log</h3>${tasks.map(t=>`<div style="font-size:13px">${t.status==='done'?'✓':'•'} ${t.text} <span class="muted">· ${t.ch} · ${t.due}</span></div>`).join('')||'<p class="muted">No follow-ups.</p>'}<button class="btn btn-s" data-a="compose" data-id="${c.id}" style="align-self:flex-start">New follow-up</button></div>
+  <div class="dsec"><h3>Notes</h3>${c.notes.map(n=>`<div style="font-size:13px"><span class="muted">${n.t}</span> ${n.x}</div>`).join('')}<div class="row"><input id="noteIn" class="btn" style="flex:1;font-weight:400;text-align:left" placeholder="Add an internal note"><button class="btn btn-s" data-a="addNote">Add</button></div></div>`;
+}
+
+/* ============================ actions ============================ */
+function go(v){S.view=v;closeDrawer();render();$('#main').scrollTop=0}
+async function withBusy(key,fn){S.busy[key]=1;render();try{await fn()}finally{delete S.busy[key];render()}}
+
+function advance(id){
+  const c=cl(id);delete S.cardMsg[id];
+  if(c.blockers.length){S.cardMsg[id]='Blocked: '+c.blockers.map(b=>b.label).join('; ')+'. Clear these first.';toast('Cannot advance '+c.ini+': open blocker','warn');render();return false}
+  if(c.stage===1&&c.elig.result!=='Active'){addB(c,'elig','Eligibility not confirmed');S.cardMsg[id]='Run an NCTracks check and get an Active result first.';render();return false}
+  if(c.stage===2&&!authFor(id).length){addB(c,'auth','No authorization on file');S.cardMsg[id]='No authorization found. Follow up with '+route(c.plan).auth+'.';render();return false}
+  if(c.stage===3){const m=(c.prog==='HC'?HC_DOCS:BH_DOCS).filter(d=>['missing','expired'].includes(S.docs[c.id+'|'+d]));if(m.length){m.forEach(d=>addB(c,'doc:'+d,d+' missing'));S.cardMsg[id]='Documents missing: '+m.join(', ')+'.';render();return false}}
+  if(c.stage===4&&!c.cg){S.cardMsg[id]='No staff assigned. Use Suggest match in Scheduling, then send to supervisor.';render();return false}
+  if(c.stage===8){if(!S.approvals.some(a=>a.kind==='start'&&a.cid===id&&a.status==='pending')){S.approvals.push({id:'AP'+Date.now(),kind:'start',cid:id,label:'Service start for '+c.ini,detail:'All readiness items complete. First visit monitored.',at:clock(),status:'pending'});log('Service start for '+c.ini+' sent to supervisor')}S.cardMsg[id]='Service start sent to supervisor for approval.';toast('Sent to supervisor for approval');render();return false}
+  c.stage++;c.since=0;log(`${c.ini} moved to ${STAGES[c.stage]}`);toast(`${c.ini} → ${STAGES[c.stage]}`);render();return true;
+}
+async function runElig(id,key){
+  const c=cl(id);await withBusy(key,async()=>{const r=await MockAPI.nctracks(c);S.stats.elig++;
+    c.elig={date:0,t:clock(),result:r.result,note:r.note};
+    if(r.result==='Active'){rmB(c,'elig');c.alert=null;toast(`${c.ini}: Active · ${r.plan}`)}
+    else if(r.result==='Active, plan changed'){const old=c.plan;c.plan=r.plan;toast(`${c.ini}: plan changed to ${r.plan}`,'warn');log(`${c.ini} plan changed from ${old} to ${r.plan}. Auth source and EVV route updated.`);addTask(c.id,'Confirm authorization with new plan ('+r.plan+')','Portal','Tomorrow 10:00 AM')}
+    else if(r.result==='Inactive'){c.alert='Eligibility returned Inactive in NCTracks';toast(`${c.ini}: Inactive in NCTracks`,'crit');addTask(c.id,'Confirm coverage with client and county DSS','Phone','Today 3:00 PM')}
+    else{if(c.stage<9)addB(c,'elig','Eligibility pending (NC FAST)');toast(`${c.ini}: pending update from NC FAST`,'warn')}
+    log(`NCTracks eligibility check for ${c.ini}: ${r.result}`);});
+}
+function addTask(cid,text,ch,due){const t={id:'T'+Date.now()+Math.floor(Math.random()*99),cid,text,owner:COORD,ch,due,status:'open',att:1};S.tasks.unshift(t);return t}
+async function renew(id){
+  const a=S.auths.find(x=>x.id===id);const c=cl(a.cid);S.stats.authChecked++;
+  await withBusy('rn-'+id,async()=>{
+    if(a.ren==='Not started'){await MockAPI.send();a.ren='Documents gathered';log(`Renewal packet gathered for ${c.ini} ${a.code}`)}
+    else if(a.ren==='Documents gathered'){await MockAPI.send();a.ren='Sent to supervisor';S.approvals.push({id:'AP'+Date.now(),kind:'renewal',ref:a.id,cid:c.id,label:`Authorization renewal: ${a.code} ${a.svc.toLowerCase()}`,detail:`Ends ${fd(a.end)}. Packet ready for ${route(c.plan).auth}.`,at:clock(),status:'pending'});log(`Renewal for ${c.ini} ${a.code} sent to supervisor`);toast('Sent to supervisor for approval')}
+    else if(a.ren==='Submitted to payer'){await MockAPI.payer();a.ren='Awaiting decision';log(`Payer status for ${c.ini}: received, in review`);toast('Payer shows request in review')}
+    else if(a.ren==='Awaiting decision'){await MockAPI.payer();a.ren='Renewed';a.start=a.end+1;a.end=a.end+90;a.used=0;log(`Authorization renewed for ${c.ini}: ${fd(a.start)}–${fd(a.end)}. Scheduling notified.`);toast(`Renewed through ${fd(a.end)}. Scheduling notified.`)}
+  });
+}
+async function evvAction(kind,id){
+  const e=S.evv.find(x=>x.id===id);const c=cl(e.cid);
+  if(kind==='mark'&&!e.reason){toast('Add a reason code before marking corrected','warn');return}
+  await withBusy((kind==='mark'?'mk-':'rq-')+id,async()=>{await MockAPI.send();
+    e.status='pending';
+    S.approvals.push({id:'AP'+Date.now(),kind:'evv',ref:e.id,cid:c.id,label:(kind==='mark'?'Verify corrected visit: ':'EVV correction: ')+e.type.toLowerCase(),detail:`${cgName(e.cg)} · ${fd(e.date)} · ${route(c.plan).evv} · reason: ${e.reason||'not given'}`,at:clock(),status:'pending'});
+    log(`EVV ${e.type.toLowerCase()} for ${c.ini} ${kind==='mark'?'marked corrected, pending verification':'sent to supervisor for correction'}`);toast('Sent to supervisor');});
+}
+function applyApproval(ap){
+  const c=cl(ap.cid);
+  if(ap.kind==='match'){c.cg=ap.cg;rmB(c,'match');if(c.stage===4){c.stage=5;c.since=0}log(`Match approved: ${cgName(ap.cg)} for ${c.ini}`)}
+  if(ap.kind==='renewal'){const a=S.auths.find(x=>x.id===ap.ref);a.ren='Submitted to payer';log(`Renewal for ${c.ini} approved and submitted to ${route(c.plan).auth}`)}
+  if(ap.kind==='evv'){const e=S.evv.find(x=>x.id===ap.ref);e.status='verified';S.stats.evvResolved++;S.visits.filter(v=>v.ex===e.id).forEach(v=>v.status='ready');log(`EVV exception for ${c.ini} verified. Visit moved to verified for billing.`)}
+  if(ap.kind==='start'){c.stage=9;c.since=0;log(`Service start approved for ${c.ini}`)}
+  if(ap.kind==='escalation'){log(`Escalation acknowledged for ${c.ini}: supervisor will contact care manager and Enrollment Broker`)}
+  if(ap.kind==='docesc'){log(`Document escalation acknowledged for ${c.ini}`)}
+}
+async function approve(id){const ap=S.approvals.find(a=>a.id===id);await withBusy('ap-'+id,async()=>{await MockAPI.send();ap.status='approved';applyApproval(ap);toast('Approved: '+ap.label)})}
+function returnAp(id){const ap=S.approvals.find(a=>a.id===id);ap.status='returned';
+  if(ap.kind==='renewal'){S.auths.find(x=>x.id===ap.ref).ren='Documents gathered'}
+  if(ap.kind==='evv'){S.evv.find(x=>x.id===ap.ref).status='open'}
+  log(`Returned to coordinator: ${ap.label}`);toast('Returned to coordinator');render()}
+function suggest(){
+  const c=cl(S.matchFor);if(!c)return;
+  const need=c.svc==='Home Health'?'Home health aide':'Personal care';
+  const list=S.cgs.map(g=>{let s=50;const why=[];
+    if(g.town===c.town){s+=20;why.push(g.town+', about 2 mi')}else{why.push(g.town+', 12+ mi')}
+    if(g.skills.includes(need)){s+=15;why.push(need.toLowerCase())}
+    const exp=[['CPR',g.cpr],['TB',g.tb],['background',g.bg]].filter(x=>x[1]<0);if(exp.length){s-=60;why.push(exp.map(x=>x[0]).join(', ')+' expired')}else why.push('credentials current');
+    const load=S.sched.filter(x=>x.cg===g.id).length;s-=load*3;why.push(load+' visits this week');
+    if(g.lang.length>1){s+=2;why.push(g.lang.join('/'))}
+    return{g,score:s,why}}).filter(m=>m.score>0).sort((a,b)=>b.score-a.score).slice(0,3);
+  S.matchRes={cid:c.id,list};
+}
+function sendMatch(cg){const c=cl(S.matchFor);S.approvals.filter(a=>a.kind==='match'&&a.cid===c.id&&a.status==='pending').forEach(a=>a.status='returned');
+  S.approvals.push({id:'AP'+Date.now(),kind:'match',cid:c.id,cg,label:'Caregiver match for '+c.ini,detail:cgName(cg)+' suggested for '+c.svc.toLowerCase()+'.',at:clock(),status:'pending'});
+  addB(c,'match','Caregiver match awaiting supervisor');log(`Match ${cgName(cg)} for ${c.ini} sent to supervisor`);toast('Sent to supervisor for approval');render()}
+function docModal(k){
+  const [cid,d]=k.split('|');const c=cl(cid);const s=S.docs[k];const r=S.docReq[k]||{hist:[]};const esc=escalated(k);
+  openModal(`<div class="row between"><div><div class="muted" style="font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;font-weight:700">Missing document workflow</div><h2 style="font-size:18px">${c.ini} · ${d}</h2></div>${sevChip(s==='expiring'?'warn':'crit',s)}</div>
+  <dl class="kv"><dt>Responsible</dt><dd>${DOC_OWNER[d]}</dd><dt>Blocks</dt><dd>${c.stage<9?'Referral stage '+STAGES[c.stage]:'Billing and compliance for an active client'}</dd></dl>
+  ${esc?`<div class="flag">No response in ${S.settings.esc} hours. Escalate to supervisor.</div>`:''}
+  <div><h3 style="margin-bottom:6px">Attempts</h3>${r.hist.length?r.hist.map((h,i)=>`<div style="font-size:13px">${i+1}. ${new Date(h.at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})} · ${h.to} · ${h.ch}</div>`).join(''):'<p class="muted">No requests sent yet.</p>'}</div>
+  <div class="row"><label class="field" style="flex:1"><span>Template</span><select id="dTpl"><option>Missing document request</option><option>Second request with deadline</option><option>Signature request (e-signature)</option></select></label><label class="field"><span>Deadline</span><select id="dDl"><option>24 hours</option><option>48 hours</option><option>72 hours</option></select></label></div>
+  <div class="row"><button class="btn btn-p" data-a="docSend" data-k="${k}">Send request</button>${esc||r.hist.length?`<button class="btn btn-danger" data-a="docEsc" data-k="${k}">Escalate to supervisor</button>`:''}<button class="btn" data-a="docRecv" data-k="${k}">Mark received</button><button class="btn" data-a="closeModal" style="margin-left:auto">Close</button></div>`);
+}
+function openModal(html){$('#modal').innerHTML=`<div class="mbox" role="dialog" aria-modal="true">${html}</div>`;$('#modal').hidden=false}
+function closeModal(){$('#modal').hidden=true;$('#modal').innerHTML=''}
+function docSend(k,ch='Secure email',dl='24 hours'){const [cid,d]=k.split('|');const c=cl(cid);S.docReq[k]=S.docReq[k]||{hist:[]};S.docReq[k].hist.push({at:Date.now(),to:DOC_OWNER[d],ch});S.docReq[k].deadline=dl;S.stats.docsFollowed++;
+  const t=S.tasks.find(t=>t.cid===cid&&t.text.includes(d)&&t.status==='open');if(t)t.att++;else addTask(cid,`Obtain ${d} from ${DOC_OWNER[d].toLowerCase()}`,ch,'Due in '+dl);
+  log(`Request sent for ${c.ini} ${d} to ${DOC_OWNER[d]} (${ch}, due in ${dl})`)}
+function docRecv(k){const [cid,d]=k.split('|');const c=cl(cid);S.docs[k]='ok';rmB(c,'doc:'+d);if(d==='Person-Centered Plan'&&c.pcp)c.pcp={status:'Signed',review:180};if(d==='Service order')c.so='On file';if(d==='CCA'&&!c.cca)c.cca={date:0,clin:'Licensed clinician'};
+  S.tasks.filter(t=>t.cid===cid&&t.text.includes(d)).forEach(t=>t.status='done');
+  if(d==='Progress notes')S.visits.filter(v=>v.cid===cid&&v.status==='note').forEach(v=>v.status='ready');
+  log(`${d} received for ${c.ini}. Tracker updated.`)}
+
+/* ============================ report ============================ */
+function buildEod(){
+  const refs=referrals();const k=kpis();const exp=S.auths.filter(a=>a.end<=30&&a.ren!=='Renewed');
+  const lines=[];const L=s=>lines.push(s);
+  L(`END-OF-DAY CLOSURE REPORT`);L(`${fdw(0)} · prepared by ${COORD} for ${SUPERVISOR}`);L(`Demo data only. Client initials used in place of names.`);L('');
+  L(`1. REFERRALS (${refs.length} in pipeline, ${k.newToday} received today)`);refs.forEach(c=>L(`   ${c.ini.padEnd(6)} ${c.svc.slice(0,32).padEnd(33)} ${STAGES[c.stage]}${c.blockers.length?'  [blocked: '+c.blockers.map(b=>b.label).join('; ')+']':''}`));L('');
+  L(`2. ELIGIBILITY`);L(`   NCTracks checks run today: ${S.stats.elig+12}`);S.clients.filter(c=>c.elig.result!=='Active').forEach(c=>L(`   ${c.ini}: ${c.elig.result}`));L('');
+  L(`3. AUTHORIZATIONS (${exp.length} expiring within 30 days)`);exp.forEach(a=>L(`   ${cl(a.cid).ini.padEnd(6)} ${a.code.padEnd(9)} ends ${fd(a.end).padEnd(7)} renewal: ${a.ren}`));L('');
+  const ver=S.evv.filter(e=>e.status==='verified');L(`4. EVV EXCEPTIONS (${S.evv.length} found, ${ver.length} verified, ${openEvv().length} still open)`);S.evv.forEach(e=>L(`   ${cl(e.cid).ini.padEnd(6)} ${e.type.padEnd(34)} ${route(cl(e.cid).plan).evv.padEnd(12)} ${e.status}`));L('');
+  L(`5. MISSING DOCUMENTS (${missingDocs().length} outstanding)`);missingDocs().forEach(([kk])=>{const[cid,d]=kk.split('|');const r=S.docReq[kk];L(`   ${cl(cid).ini.padEnd(6)} ${d.padEnd(22)} ${r?r.hist.length+' attempt(s)':'not yet requested'}${escalated(kk)?'  ESCALATE':''}`)});L('');
+  L(`6. CARRIED TO TOMORROW`);S.tasks.filter(t=>t.status==='open').forEach(t=>L(`   ${(cl(t.cid)||{ini:'-'}).ini.padEnd(6)} ${t.text}`));L('');
+  L(`7. NEEDS SUPERVISOR DECISION (${pendingAp().length})`);pendingAp().forEach(a=>L(`   ${a.label}`));
+  return lines.join('\n');
+}
+
+/* ============================ scenarios ============================ */
+function scenReset(){
+  S.clients=S.clients.filter(c=>c.id!=='C15');S.auths=S.auths.filter(a=>a.cid!=='C15');S.evv=S.evv.filter(e=>e.cid!=='C15');S.tasks=S.tasks.filter(t=>t.cid!=='C15');S.approvals=S.approvals.filter(a=>a.cid!=='C15');S.sched=S.sched.filter(s=>s.cid!=='C15');S.visits=S.visits.filter(v=>v.cid!=='C15');
+  Object.keys(S.docs).filter(k=>k.startsWith('C15|')).forEach(k=>delete S.docs[k]);Object.keys(S.docReq).filter(k=>k.startsWith('C15|')).forEach(k=>delete S.docReq[k]);
+}
+const SCEN={
+ hc:{title:'Home care referral with three blockers',steps:[
+  {t:'A new referral arrives',x:'WellCare of NC broadcasts a Personal Care referral through HHAeXchange for M.R. It lands in the pipeline automatically, with payer routing already worked out: NCTracks for eligibility, HHAeXchange for the authorization and EVV.',view:'pipeline',hl:'card-C15',run(){scenReset();const c=mk('C15','M.R.','Goldsboro','WellCare of NC','Personal Care',0,{since:0,received:0,elig:{date:-30,result:'Not checked'},src:'HHAeXchange case broadcast (WellCare of NC)',mid:'5519'});S.clients.push(c);seedDocs(c);log('New referral M.R. received from HHAeXchange (WellCare of NC)')}},
+  {t:'Log it and verify eligibility',x:'The coordinator logs the referral and runs a real-time NCTracks check. Eligibility is confirmed before anything else happens, even though the client has a plan card.',view:'eligibility',hl:'elig-C15',async run(){const c=cl('C15');c.stage=1;log('M.R. logged');await sim(700,900);c.elig={date:0,t:clock(),result:'Active'};S.stats.elig++;log('NCTracks eligibility check for M.R.: Active (WellCare of NC)');c.stage=2}},
+  {t:'Blocker 1: no authorization',x:'No authorization has come through HHAeXchange yet. The card is blocked, a follow-up task is created for the plan, and the 24-hour escalation clock starts.',view:'pipeline',hl:'card-C15',run(){const c=cl('C15');addB(c,'auth','No authorization on file');addTask('C15','Request authorization status from WellCare of NC via HHAeXchange','Portal message','Escalate if no reply in 24h');log('Authorization missing for M.R. Follow-up opened with WellCare of NC.')}},
+  {t:'Blockers 2 and 3: missing documents',x:'The document checklist shows the consent form and the plan of care are missing. Requests go out with a 24-hour deadline and each attempt is logged.',view:'docs',hl:'doc-C15-Consent forms',run(){S.docTab='HC';const c=cl('C15');['Consent forms','Plan of Care'].forEach(d=>{S.docs['C15|'+d]='missing';addB(c,'doc:'+d,d+' missing');docSend('C15|'+d,'E-signature request','24 hours')})}},
+  {t:'The authorization arrives',x:'WellCare approves T1019 personal care: 336 units over 90 days. Units and dates populate, the authorization blocker clears, and the card moves to Authorization Confirmed.',view:'auths',hl:'auth-A15',run(){S.auths.push({id:'A15',cid:'C15',num:'DEMO-AUTH-10778',code:'T1019',svc:'Personal care',units:336,used:0,start:0,end:90,ren:'Not started'});const c=cl('C15');rmB(c,'auth');c.stage=3;log('Authorization received for M.R.: T1019, 336 units, '+fd(0)+'–'+fd(90))}},
+  {t:'Documents come back',x:'The consent and plan of care return by e-signature. Both are marked received, the tracker updates, and the referral reaches Documents Complete.',view:'docs',hl:'doc-C15-Consent forms',run(){['Consent forms','Plan of Care'].forEach(d=>docRecv('C15|'+d));cl('C15').stage=4}},
+  {t:'Staffing: suggest a match',x:'OneWindow ranks three caregivers by distance, skills, credentials and current load. The coordinator sends the top match to the supervisor rather than assigning it.',view:'schedule',hl:'match',run(){S.matchFor='C15';suggest();sendMatch(S.matchRes.list[0].g.id)}},
+  {t:'Supervisor approves the match',x:'Switching to the Supervisor role shows the approvals queue. The supervisor approves, the caregiver is assigned and the referral moves to Staffing Confirmed.',view:'approvals',role:'sup',hl:'first-ap',async run(){const ap=S.approvals.find(a=>a.kind==='match'&&a.cid==='C15'&&a.status==='pending');await sim(500,700);ap.status='approved';applyApproval(ap)}},
+  {t:'First visit scheduled, EVV set up',x:'The first visit goes on the calendar for today and EVV is set up on the HHAeXchange route, because WellCare is a Standard Plan.',view:'schedule',role:'coord',hl:'calendar',run(){const c=cl('C15');S.sched.push({cid:'C15',cg:c.cg,day:0,start:'8:00',end:'11:00',hrs:3,isNew:true});c.stage=7;log('First visit for M.R. scheduled '+fd(0)+' 8:00–11:00. EVV set up in HHAeXchange.')}},
+  {t:'EVV exception: missing clock-out',x:'The first visit comes back without a clock-out. The coordinator messages the caregiver, adds a reason code and marks it corrected, pending verification.',view:'evv',hl:'evv-E15',async run(){const c=cl('C15');c.stage=8;S.evv.unshift({id:'E15',cid:'C15',cg:c.cg,date:0,type:'Missing clock-out',el:'time',sched:'8:00–11:00',actual:'8:03 – no clock-out',status:'open',reason:null,attempts:1});S.visits.push({id:'V900',cid:'C15',cg:c.cg,day:0,hrs:3,status:'evv',ex:'E15'});addTask('C15','Caregiver asked to confirm clock-out time for M.R. first visit','Portal message','Today 5:00 PM');log('Missing clock-out on M.R. first visit. Caregiver messaged.');await sim(500,700);const e=S.evv.find(x=>x.id==='E15');e.reason='Caregiver forgot to clock out';e.status='pending';S.approvals.push({id:'AP-E15',kind:'evv',ref:'E15',cid:'C15',label:'Verify corrected visit: missing clock-out',detail:'Caregiver confirmed 11:00 clock-out. Reason code: caregiver forgot to clock out.',at:clock(),status:'pending'});log('EVV exception for M.R. marked corrected, pending verification')}},
+  {t:'Supervisor verifies, visit is billable',x:'The supervisor verifies the correction. The visit moves to Verified and ready in Billing Readiness. No claim is submitted from here; billing reviews the batch.',view:'billing',role:'sup',hl:'bill-ready',async run(){const ap=S.approvals.find(a=>a.id==='AP-E15');await sim(500,700);ap.status='approved';applyApproval(ap)}},
+  {t:'End-of-day report',x:'One click builds the closure report from everything that happened today, including M.R.’s full journey, and it is ready to send to the supervisor.',view:'eod',role:'coord',hl:'eod',run(){S.eod=buildEod();log('End-of-day report generated')}}]},
+ bh:{title:'Behavioral health: unsigned PCP and a plan mismatch',steps:[
+  {t:'Peer Support referral for P.L.',x:'P.L. has a CCA completed by a licensed clinician six days ago, but the Person-Centered Plan is still an unsigned draft. Readiness sits below 100% and service cannot start.',view:'bh',hl:'bh-C11'},
+  {t:'Request the PCP signatures',x:'A signature request goes to the care manager and clinician with a deadline. The attempt is logged and the follow-up list updates. The blocker stays until the signed plan comes back.',view:'docs',hl:'doc-C11-Person-Centered Plan',run(){S.docTab='BH';docSend('C11|Person-Centered Plan','E-signature request','24 hours')}},
+  {t:'A 1915(i) request on a Standard Plan',x:'G.A. is on AmeriHealth Caritas NC, a Standard Plan, and was referred for 1915(i) Respite. OneWindow raises a red flag: 1915(i) is only available through a Tailored Plan, NC Medicaid Direct or the EBCI Tribal Option.',view:'pipeline',hl:'card-C12',drawer:'C12'},
+  {t:'Escalate, do not decide',x:'The coordinator escalates to the supervisor. The member may need to request a plan change through the NC Medicaid Enrollment Broker. That decision stays with the supervisor and care manager.',view:'approvals',hl:'first-ap',run(){escalate('C12')}}]}
+};
+function escalate(cid){const c=cl(cid);if(!S.approvals.some(a=>a.kind==='escalation'&&a.cid===cid&&a.status==='pending')){S.approvals.unshift({id:'AP'+Date.now(),kind:'escalation',cid,label:'Plan mismatch: 1915(i) Respite on a Standard Plan',detail:'Member may need a plan change via the NC Medicaid Enrollment Broker. Care manager to be contacted.',at:clock(),status:'pending'});log(`1915(i) plan mismatch for ${c.ini} escalated to supervisor`)}
+  const t=S.tasks.find(t=>t.cid===cid&&t.text.startsWith('Escalate'));if(t){t.status='done'}}
+async function scenGo(){
+  const sc=SCEN[S.scenario.key];const st=sc.steps[S.scenario.i];S.scenario.busy=true;renderScen();
+  if(st.role)S.role=st.role;
+  if(st.run)await st.run();
+  S.view=st.view;S.scenario.busy=false;
+  if(st.drawer){render();openDrawer(st.drawer)}else{closeDrawer();render()}
+  renderScen();
+  requestAnimationFrame(()=>{let el=st.hl==='first-ap'?document.querySelector('[data-hl^="ap-"]'):document.querySelector(`[data-hl="${st.hl}"]`);if(el){el.classList.add('hl');el.scrollIntoView({block:'center',inline:'center',behavior:'smooth'})}});
+}
+function renderScen(){
+  const s=S.scenario;if(!s){$('#scen').hidden=true;return}
+  const sc=SCEN[s.key];const st=sc.steps[s.i];const last=s.i===sc.steps.length-1;
+  $('#scen').hidden=false;
+  $('#scen').innerHTML=`<div class="row between"><span class="eyebrow">Sample scenario · step ${s.i+1} of ${sc.steps.length}</span><button class="iconbtn" style="width:28px;height:28px" data-a="scenExit" aria-label="Exit scenario">${ic('x',15)}</button></div><div class="prog"><i style="width:${(s.i+1)/sc.steps.length*100}%"></i></div><h2 style="font-size:16px">${st.t}</h2><p>${st.x}</p><div class="row between"><span class="muted" style="font-size:12px">${sc.title}</span>${s.busy?'<button class="btn btn-p" disabled><span class="spin"></span> Running</button>':last?'<button class="btn btn-p" data-a="scenExit">Finish</button>':'<button class="btn btn-p" data-a="scenNext">Next step →</button>'}</div>`;
+}
+function startScen(key){closeModal();S.scenario={key,i:0};scenGo()}
+
+/* ============================ events ============================ */
+const H={
+  go:d=>go(d.v),
+  role:d=>{S.role=d.r;log(`Switched to ${S.role==='sup'?'Supervisor':'Coordinator'} view`);render()},
+  theme:()=>{const cur=document.documentElement.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',cur==='dark'?'light':'dark')},
+  drawer:d=>openDrawer(d.id),closeDrawer,
+  sync:()=>withBusy('sync',async()=>{await MockAPI.sync();S.sources.forEach(s=>s.m=0);log('All sources synced (simulated)');toast('All sources synced')}),
+  qa:d=>{const x=S._q[+d.i];if(!x)return;if(x.a==='drawer')openDrawer(x.id);else if(x.a==='doc')docModal(x.k);else{go(x.v);requestAnimationFrame(()=>{const el=document.querySelector(`[data-hl="${x.hl}"]`);if(el){el.classList.add('hl');el.scrollIntoView({block:'center'})}})}},
+  advance:d=>advance(d.id),
+  elig:(d,t)=>runElig(d.id,(S.drawer&&t.closest('#drawer')?'dl-':'el-')+d.id),
+  renew:d=>renew(d.id),
+  msgCg:d=>{const e=S.evv.find(x=>x.id===d.id);const c=cl(e.cid);openModal(`<h2 style="font-size:18px">Message ${cgName(e.cg)}</h2><p class="muted">Sent through the EVV app's secure messaging (simulated). Client initials only.</p><label class="field"><span>Message</span><textarea id="msgText" rows="5">Hi ${cgName(e.cg).split(' ')[0]}, the ${fdw(e.date)} visit for ${c.ini} (scheduled ${e.sched}) shows: ${e.type.toLowerCase()}. Please confirm the correct time and location in the EVV app today so the visit can be verified before the ${cutoff().label} billing cutoff. Thank you.</textarea></label><div class="row"><button class="btn btn-p" data-a="msgSend" data-id="${e.id}">Send message</button><button class="btn" data-a="closeModal">Cancel</button></div>`)},
+  msgSend:async d=>{const e=S.evv.find(x=>x.id===d.id);closeModal();await MockAPI.send();e.attempts++;S.stats.msgs++;addTask(e.cid,`Caregiver asked to correct ${e.type.toLowerCase()} (${fd(e.date)})`,'Portal message','Before '+cutoff().label);log(`Message sent to ${cgName(e.cg)} about ${e.type.toLowerCase()} for ${cl(e.cid).ini}`);toast('Message sent to caregiver');render()},
+  evvReq:d=>evvAction('req',d.id),evvMark:d=>evvAction('mark',d.id),
+  docTab:d=>{S.docTab=d.t;render()},
+  doc:d=>docModal(d.k),
+  docSend:async d=>{const tpl=$('#dTpl').value;const dl=$('#dDl').value;closeModal();await MockAPI.send();docSend(d.k,tpl.includes('Signature')?'E-signature request':'Secure email',dl);toast('Request sent, due in '+dl);render()},
+  docEsc:d=>{const [cid,doc]=d.k.split('|');const c=cl(cid);S.approvals.push({id:'AP'+Date.now(),kind:'docesc',cid,label:`Document escalation: ${doc} for ${c.ini}`,detail:`${(S.docReq[d.k]||{hist:[]}).hist.length} attempts to ${DOC_OWNER[doc]} with no response.`,at:clock(),status:'pending'});log(`${doc} for ${c.ini} escalated to supervisor`);closeModal();toast('Escalated to supervisor');render()},
+  docRecv:d=>{docRecv(d.k);closeModal();toast('Marked received');render()},
+  closeModal,
+  suggest:()=>withBusy('match',async()=>{await sim(600,900);suggest()}),
+  sendMatch:d=>sendMatch(d.cg),
+  approve:d=>approve(d.id),returnAp:d=>returnAp(d.id),
+  batch:()=>withBusy('batch',async()=>{await MockAPI.send();const n=S.visits.filter(v=>v.status==='ready').length;S.batchSent=`Batch of ${n} verified visits sent to Billing for review at ${clock()}.`;log(`Ready batch of ${n} visits sent to Billing for review`);toast('Batch sent to Billing for review')}),
+  tf:d=>{S.taskFilter=d.f;render()},
+  taskDone:d=>{const t=S.tasks.find(x=>x.id===d.id);t.status='done';log('Follow-up completed: '+t.text);render()},
+  compose:d=>{const pre=d.id||'';openModal(`<h2 style="font-size:18px">New message from template</h2><div class="row"><label class="field" style="flex:1"><span>Client</span><select id="cpC">${S.clients.map(c=>`<option value="${c.id}" ${c.id===pre?'selected':''}>${c.ini} · ${c.svc}</option>`).join('')}</select></label><label class="field" style="flex:1"><span>Template</span><select id="cpT"><option>Missing document request</option><option>EVV correction request to caregiver</option><option>Authorization renewal reminder</option><option>Escalation to supervisor</option></select></label></div><label class="field"><span>Channel</span><select id="cpCh"><option>Secure email</option><option>Phone</option><option>Portal message</option></select></label><div class="row"><button class="btn" data-a="cpPreview">Preview</button><button class="btn btn-p" data-a="cpSend">Send (simulated)</button><button class="btn" data-a="closeModal">Cancel</button></div><div id="cpOut"></div>`)},
+  cpPreview:()=>{$('#cpOut').innerHTML=`<div class="report">${tplText()}</div>`},
+  cpSend:async()=>{const cid=$('#cpC').value,t=$('#cpT').value,ch=$('#cpCh').value;closeModal();await MockAPI.send();addTask(cid,t+' sent',ch,'Follow up in 24h');log(`${t} sent for ${cl(cid).ini} via ${ch}`);toast('Message sent (simulated)');render()},
+  eodGen:()=>withBusy('eod',async()=>{await sim(700,1000);S.eod=buildEod();log('End-of-day report generated')}),
+  copy:()=>{const txt=S.eod;navigator.clipboard.writeText(txt).then(()=>toast('Report copied')).catch(()=>{const r=document.createRange();r.selectNodeContents($('#eodText'));const s=getSelection();s.removeAllRanges();s.addRange(r);toast('Text selected. Press Ctrl+C to copy.','warn')})},
+  eodSend:()=>withBusy('eodSend',async()=>{await MockAPI.send();log('End-of-day report emailed to supervisor (simulated)');toast('Report sent to '+SUPERVISOR)}),
+  revealAsk:()=>{S.revealAsk=true;renderDrawer();setTimeout(()=>{const i=$('#revealReason');if(i)i.focus()},0)},
+  reveal:()=>{const r=($('#revealReason').value||'').trim();if(r.length<5){toast('Enter a reason of at least 5 characters','warn');return}S.revealed[S.drawer]=true;S.revealAsk=null;log(`Full Medicaid ID viewed for ${cl(S.drawer).ini}. Reason: ${r}`);toast('Access logged');render()},
+  addNote:()=>{const v=($('#noteIn').value||'').trim();if(!v)return;cl(S.drawer).notes.push({t:clock(),x:v});log(`Note added for ${cl(S.drawer).ini}`);renderDrawer()},
+  escalate:d=>withBusy('esc-'+d.id,async()=>{await MockAPI.send();escalate(d.id);toast('Escalated to supervisor')}),
+  scenMenu:()=>openModal(`<h2 style="font-size:18px">Run a sample scenario</h2><p class="muted">Each scenario walks through the workflow step by step and changes the demo data as it goes.</p><button class="qi" style="text-align:left;background:var(--surface);cursor:pointer" data-a="scenStart" data-k="hc"><span class="sev crit"></span><span class="body"><span class="t">Home care referral with three blockers</span><br><span class="m">Referral, eligibility, missing authorization, missing documents, staffing, EVV exception, billing readiness and end-of-day report. 12 steps.</span></span></button><button class="qi" style="text-align:left;background:var(--surface);cursor:pointer" data-a="scenStart" data-k="bh"><span class="sev warn"></span><span class="body"><span class="t">Behavioral health: unsigned PCP and a plan mismatch</span><br><span class="m">Peer Support readiness and a 1915(i) request on a Standard Plan. 4 steps.</span></span></button><button class="btn" data-a="closeModal" style="align-self:flex-end">Cancel</button>`),
+  scenStart:d=>startScen(d.k),
+  scenNext:()=>{S.scenario.i++;scenGo()},
+  scenExit:()=>{S.scenario=null;renderScen();toast('Scenario closed. Demo data keeps the changes.')}
+};
+function tplText(){const c=cl($('#cpC').value);const t=$('#cpT').value;const m={
+ 'Missing document request':`Hello,\n\nWe are still waiting on a document for client ${c.ini} (${c.svc}). Please send it by the deadline so services are not delayed.\n\nThank you,\n${COORD}`,
+ 'EVV correction request to caregiver':`Hi,\n\nA recent visit for ${c.ini} needs an EVV correction. Please confirm the clock-in and clock-out times in the EVV app today.\n\nThank you,\n${COORD}`,
+ 'Authorization renewal reminder':`Hello,\n\nThe authorization for ${c.ini} (${route(c.plan).auth}) ends soon. The renewal packet is ready. Please confirm next steps.\n\nThank you,\n${COORD}`,
+ 'Escalation to supervisor':`${SUPERVISOR},\n\nEscalating an open item for ${c.ini}: ${c.blockers.map(b=>b.label).join('; ')||'see follow-up log'}. Your decision is needed to proceed.\n\n${COORD}`};return m[t]}
+
+document.addEventListener('click',e=>{const t=e.target.closest('[data-a]');if(!t||t.disabled)return;const f=H[t.dataset.a];if(f){e.preventDefault&&t.tagName==='A'&&e.preventDefault();f(t.dataset,t,e)}});
+document.addEventListener('change',e=>{const t=e.target;
+  if(t.id==='authExp'){S.authExp=t.checked;render()}
+  if(t.id==='evvAgg'){S.evvAgg=t.value;render()}
+  if(t.id==='matchFor'){S.matchFor=t.value;S.matchRes=null;render()}
+  if(t.dataset.rc){const ex=S.evv.find(x=>x.id===t.dataset.rc);ex.reason=t.value||null;if(t.value)log(`Reason code "${t.value}" added to ${ex.type.toLowerCase()} for ${cl(ex.cid).ini}`)}
+  if(t.id==='set-lead'){S.settings.lead=Math.max(1,+t.value||10);log('Renewal lead time set to '+S.settings.lead+' days');render()}
+  if(t.id==='set-esc'){S.settings.esc=Math.max(1,+t.value||24);log('Escalation window set to '+S.settings.esc+' hours');render()}
+  if(t.id==='set-cut'){S.settings.cutoff=+t.value;log('Billing cutoff changed');render()}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('#modal').hidden)closeModal();else if(S.drawer)closeDrawer()}; if(e.key==='Enter'&&e.target.id==='noteIn')H.addNote()});
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+const gs=$('#gsearch');
+gs.addEventListener('input',()=>{const q=gs.value.trim().toLowerCase();const box=$('#sres');if(!q){box.hidden=true;return}
+  const res=[];S.clients.forEach(c=>{if((c.ini+' '+c.id+' '+c.town+' '+c.plan+' '+c.svc).toLowerCase().includes(q))res.push(`<button data-a="sOpen" data-id="${c.id}"><span><b>${c.ini}</b> ${c.svc}</span><span class="muted">${c.id}</span></button>`)});
+  S.cgs.forEach(g=>{if(g.name.toLowerCase().includes(q))res.push(`<button data-a="sGo" data-v="schedule"><span>${g.name}</span><span class="muted">Caregiver</span></button>`)});
+  S.auths.forEach(a=>{if(a.num.toLowerCase().includes(q)||a.code.toLowerCase().includes(q))res.push(`<button data-a="sGo" data-v="auths"><span>${a.num} · ${a.code}</span><span class="muted">${cl(a.cid)?cl(a.cid).ini:''}</span></button>`)});
+  box.innerHTML=res.slice(0,10).join('')||'<div class="empty">No matches</div>';box.hidden=false});
+H.sOpen=d=>{$('#sres').hidden=true;gs.value='';openDrawer(d.id)};
+H.sGo=d=>{$('#sres').hidden=true;gs.value='';go(d.v)};
+document.addEventListener('click',e=>{if(!e.target.closest('.search'))$('#sres').hidden=true});
+
+/* ============================ boot ============================ */
+$('#markIc').innerHTML=ic('window',16);$('#searchIc').innerHTML=ic('search',15);$('#themeBtn').innerHTML=ic('moon',17);
+$('#scenBtn').innerHTML=ic('play',14)+' Run Sample Scenario';
+$('#today').textContent=fdw(0);
+seed();render();
+</script>
